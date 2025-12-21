@@ -96,14 +96,14 @@ export default function TestScraper() {
     }, [polling, session]);
 
     return (
-        <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-700/50 rounded-xl p-6">
+        <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-700/50 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
                     <Search className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-semibold text-white">Test eBay Scraper (API)</h3>
-                    <p className="text-sm text-gray-400">Scrape sold listings using the official eBay Finding API.</p>
+                    <h3 className="text-base md:text-lg font-semibold text-white">Test eBay Scraper (API)</h3>
+                    <p className="text-xs md:text-sm text-gray-400">Scrape sold listings using the official eBay Finding API.</p>
                 </div>
             </div>
 
@@ -177,7 +177,7 @@ export default function TestScraper() {
                     </div>
                 )}
 
-                <div className="bg-gray-800/50 rounded-lg p-4 text-sm text-gray-400 mt-6">
+                <div className="bg-gray-800/50 rounded-lg p-4 text-xs md:text-sm text-gray-400 mt-6">
                     <p className="font-semibold text-gray-300 mb-2">How it works:</p>
                     <ul className="space-y-1 list-disc list-inside">
                         <li>Uses the official eBay Finding API (sandbox keys).</li>
