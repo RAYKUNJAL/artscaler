@@ -1,0 +1,114 @@
+{
+  "app_name": "eBay Art Pulse Pro",
+  "version": "2.0",
+  "currency": "USD",
+  "payment_gateways": [
+    "paypal",
+    "square"
+  ],
+  "membership_tiers": [
+    {
+      "id": "free",
+      "name": "Free Scout",
+      "price_monthly": 0,
+      "price_yearly": 0,
+      "limits": {
+        "daily_scrapes": 10,
+        "keywords_tracked": 5,
+        "price_predictions": false,
+        "auto_listing_generator": false,
+        "telegram_alerts": false,
+        "csv_export": true,
+        "historical_data_days": 7
+      }
+    },
+    {
+      "id": "pro",
+      "name": "Pro Painter",
+      "price_monthly": 29.99,
+      "price_yearly": 299,
+      "paypal_plan_id": "P-XXXXXX",
+      "square_plan_id": "PRO_MONTHLY_2025",
+      "limits": {
+        "daily_scrapes": 500,
+        "keywords_tracked": 150,
+        "price_predictions": true,
+        "auto_listing_generator": true,
+        "telegram_alerts": true,
+        "csv_export": true,
+        "historical_data_days": 365,
+        "competing_seller_tracker": true,
+        "title_optimizer_a_b_testing": true,
+        "profit_calculator": true,
+        "bulk_listing_template_export": true
+      }
+    },
+    {
+      "id": "studio",
+      "name": "Studio Empire",
+      "price_monthly": 99.99,
+      "price_yearly": 999,
+      "paypal_plan_id": "P-YYYYYY",
+      "square_plan_id": "STUDIO_MONTHLY_2025",
+      "limits": {
+        "daily_scrapes": 5000,
+        "keywords_tracked": 1000,
+        "price_predictions": true,
+        "auto_listing_generator": true,
+        "telegram_alerts": true,
+        "csv_export": true,
+        "historical_data_days": "unlimited",
+        "competing_seller_tracker": true,
+        "title_optimizer_a_b_testing": true,
+        "profit_calculator": true,
+        "bulk_listing_template_export": true,
+        "white_label_reports": true,
+        "api_access": true,
+        "team_accounts": 5,
+        "priority_scraping_queue": true,
+        "custom_niche_discovery_engine": true
+      }
+    }
+  ],
+  "core_features": [
+    "real_time_ebay_completed_scraper",
+    "average_price_7_30_90_days",
+    "bid_count_heatmap",
+    "watch_count_tracker",
+    "sell_through_rate_calculator",
+    "keyword_cloud_generator",
+    "price_prediction_ml_model",
+    "one_click_ebay_listing_template_generator",
+    "telegram_discord_webhook_alerts",
+    "competitor_seller_watchlist",
+    "title_ab_test_simulator",
+    "profit_margin_calculator_with_shipping_fees",
+    "trending_niche_riser_detector",
+    "seasonal_trend_calendar",
+    "best_listing_time_recommender",
+    "bulk_csv_pdf_export",
+    "airbrush_stencil_recommendations",
+    "90_day_money_back_guarantee"
+  ],
+  "data_sources": {
+    "primary": "ebay_completed_items_rss_public",
+    "fallback": "ebay_terapeak_proxy_via_official_api",
+    "cache_ttl_seconds": 3600
+  },
+  "tech_stack_recommended": {
+    "backend": "Node.js + Python scraper on AWS Lambda",
+    "database": "PostgreSQL + Redis cache",
+    "frontend": "React Native (iOS/Android) + Web Dashboard",
+    "payments": "PayPal Subscriptions API + Square recurring",
+    "hosting": "Vercel + Render + Cloudflare"
+  },
+  "launch_price_hook": {
+    "founder_lifetime": 399,
+    "early_bird_yearly": 199
+  },
+  "legal": {
+    "terms_url": "https://ebayartpulse.com/terms",
+    "privacy_url": "https://ebayartpulse.com/privacy",
+    "dmca_compliant": true
+  }
+}
