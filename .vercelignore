@@ -1,0 +1,24 @@
+# Vercel Ignore File
+# Exclude scraping artifacts and local logs
+*.log
+*.json
+!package.json
+!tsconfig.json
+!vercel.json
+!next.config.js
+!next.config.mjs
+.env
+.env.local
+.env.production
+.env.development
+node_modules
+.next
+.git
+tmp
+coverage
+build-log.txt
+lint_results.txt
+test-results
+scraped_data
+clean_listings_*.json
+scraped_listings_*.json
