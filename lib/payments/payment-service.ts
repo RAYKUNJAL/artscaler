@@ -194,39 +194,29 @@ export class PaymentService {
         throw new Error('Square integration not yet implemented. Please configure Square SDK.');
     }
 
-    /**
-     * Create PayPal subscription
-     * 
-     * NOTE: This is a skeleton implementation. You'll need to:
-     * 1. Install PayPal SDK: npm install @paypal/checkout-server-sdk
-     * 2. Get PayPal credentials from https://developer.paypal.com/
-     * 3. Set environment variables: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET
-     * 4. Create subscription plans in PayPal dashboard
-     */
     static async createPayPalSubscription(params: CreateSubscriptionParams): Promise<string> {
         console.log('[Payment] Creating PayPal subscription:', params);
 
-        // TODO: Implement PayPal Subscriptions API
-        // const paypal = require('@paypal/checkout-server-sdk');
-        // const environment = new paypal.core.LiveEnvironment(
-        //     process.env.PAYPAL_CLIENT_ID,
-        //     process.env.PAYPAL_CLIENT_SECRET
-        // );
-        // const client = new paypal.core.PayPalHttpClient(environment);
+        const plans = await this.getPlans();
+        const selectedPlan = plans.find(p => p.tier_id === params.tierId);
 
-        // Example PayPal subscription creation:
-        // const request = new paypal.subscriptions.SubscriptionsCreateRequest();
-        // request.requestBody({
-        //     plan_id: `pulse-${params.tierId}-${params.billingCycle}`,
-        //     subscriber: {
-        //         email_address: userEmail
-        //     }
-        // });
+        if (!selectedPlan) {
+            throw new Error(`Invalid plan for tier: ${params.tierId}`);
+        }
 
-        // const response = await client.execute(request);
-        // return response.result.id;
+        const paypalPlanId = params.billingCycle === 'monthly'
+            ? selectedPlan.paypal_plan_id_monthly
+            : selectedPlan.paypal_plan_id_yearly;
 
-        throw new Error('PayPal integration not yet implemented. Please configure PayPal SDK.');
+        if (!paypalPlanId) {
+            throw new Error(`No PayPal Plan ID found for ${params.tierId} (${params.billingCycle})`);
+        }
+
+        // Return the Plan ID that the frontend PayPal Button will uses to 'createSubscription'
+        // In a client-side integration, we pass the Plan ID to the button.
+        // If this was a server-side creation (e.g. via email), we would call PayPal API here.
+        // For ArtScaler, we act as a helper to resolve the correct Plan ID.
+        return paypalPlanId;
     }
 
     /**
