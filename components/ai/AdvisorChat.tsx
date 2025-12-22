@@ -31,12 +31,19 @@ export default function AdvisorChat() {
     }, []);
 
     const checkAccess = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            const { limits } = await PricingService.getUserUsage(supabase, user.id);
-            setHasAccess(limits.hasAIAdvisor);
-        } else {
-            setHasAccess(false);
+        try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (error) throw error;
+
+            if (user) {
+                const { limits } = await PricingService.getUserUsage(supabase, user.id);
+                setHasAccess(limits.hasAIAdvisor);
+            } else {
+                setHasAccess(false);
+            }
+        } catch (err) {
+            console.error('Error checking advisor access:', err);
+            setHasAccess(false); // Default to no access on error
         }
     };
 
