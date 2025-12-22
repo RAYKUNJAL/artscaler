@@ -17,10 +17,10 @@ export async function GET(request: Request) {
 
     try {
         if (sessionId) {
-            const messages = await ArtCoachService.getSessionMessages(sessionId)
+            const messages = await ArtCoachService.getSessionMessages(supabase, sessionId)
             return NextResponse.json({ success: true, messages })
         } else {
-            const sessions = await ArtCoachService.getSessions(user.id)
+            const sessions = await ArtCoachService.getSessions(supabase, user.id)
             return NextResponse.json({ success: true, sessions })
         }
     } catch (err: any) {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
             }
         }
 
-        const result = await ArtCoachService.getCoachAdvice({
+        const result = await ArtCoachService.getCoachAdvice(supabase, {
             userId: user.id,
             sessionId,
             message

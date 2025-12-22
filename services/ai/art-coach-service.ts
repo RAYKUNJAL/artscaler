@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createServerClient } from '@/lib/supabase/server';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
 
@@ -7,13 +7,11 @@ export class ArtCoachService {
     /**
      * Get a response from the Art Coach with real-world context and session memory
      */
-    static async getCoachAdvice(params: {
+    static async getCoachAdvice(supabase: SupabaseClient, params: {
         userId: string;
         sessionId?: string;
         message: string;
     }) {
-        const supabase = await createServerClient()
-
         // 1. Fetch/Create Session
         let sessionId = params.sessionId;
         if (!sessionId) {
@@ -109,8 +107,7 @@ PERSONALITY:
     /**
      * Fetch all coaching sessions for a user
      */
-    static async getSessions(userId: string) {
-        const supabase = await createServerClient();
+    static async getSessions(supabase: SupabaseClient, userId: string) {
         const { data } = await supabase
             .from('coach_sessions')
             .select('*')
@@ -122,8 +119,7 @@ PERSONALITY:
     /**
      * Fetch messages for a specific session
      */
-    static async getSessionMessages(sessionId: string) {
-        const supabase = await createServerClient();
+    static async getSessionMessages(supabase: SupabaseClient, sessionId: string) {
         const { data } = await supabase
             .from('coach_messages')
             .select('*')
