@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { EBAY_ART_KNOWLEDGE_BASE } from './knowledge-base';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
 
@@ -63,10 +64,7 @@ REAL-TIME CONTEXT:
 - Top Trending Styles: ${topStyles?.map(s => `${s.style_term} (WVS: ${s.avg_wvs})`).join(', ')}
 - Current Output: ${queue?.map(q => `${q.style} in ${q.size} (${q.status})`).join(', ')}
 
-EBAY KNOWLEDGE BASE:
-- SEO: Keywords in first 40 chars. Mention medium and size.
-- PRICING: High demand (WVS > 3) ending Sundays.
-- LOGISTICS: 1-day handling for Top Rated Plus.
+${EBAY_ART_KNOWLEDGE_BASE}
 
 PERSONALITY:
 - Encouraging but data-driven. Reference the context data above.
