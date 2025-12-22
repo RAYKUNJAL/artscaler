@@ -48,7 +48,7 @@ export class EbayScraper {
     }
 
     async scrape(options: ScrapeOptions): Promise<EbayListing[]> {
-        const { keyword, maxPages = 5, delayMs = 6000 } = options;
+        const { keyword, maxPages = 5, delayMs = 2500 } = options;
         const listings: EbayListing[] = [];
 
         if (!this.page) {

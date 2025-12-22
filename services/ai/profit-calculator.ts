@@ -19,8 +19,10 @@ export interface ProfitCalculation {
 
 export class ProfitCalculator {
     private static EBAY_ART_FEE_PERCENT = 0.1325; // 13.25% for most Art categories
-    private static EBAY_FIXED_FEE = 0.30; // $0.30 per order
-    private static PRO_TIER_DISCOUNT = 0.10; // 10% off fees for Pro/Studio tiers
+    private static EBAY_FIXED_FEE = 0.40; // Updated to $0.40 for 2024
+    private static REGULATORY_OPERATING_FEE = 0.0035; // 0.35% for US sellers
+    private static INTERNATIONAL_FEE = 0.0165; // ~1.65% for international orders
+    private static PRO_TIER_DISCOUNT = 0.10; // 10% off final value fees for Store subscribers
 
     /**
      * Calculate profit based on inputs
@@ -31,7 +33,9 @@ export class ProfitCalculator {
         shippingCost: number = 0,
         itemCost: number = 0,
         otherCosts: number = 0,
-        isPro: boolean = false
+        isPro: boolean = false,
+        isInternational: boolean = false,
+        promoAdRate: number = 0
     ): ProfitCalculation {
         const totalRevenue = salePrice + shippingCharged;
 
@@ -41,7 +45,21 @@ export class ProfitCalculator {
             feePercent = feePercent * (1 - this.PRO_TIER_DISCOUNT);
         }
 
-        const ebayFees = (totalRevenue * feePercent) + this.EBAY_FIXED_FEE;
+        // Add Regulatory Fee (2024)
+        feePercent += this.REGULATORY_OPERATING_FEE;
+
+        // International Fee
+        if (isInternational) {
+            feePercent += this.INTERNATIONAL_FEE;
+        }
+
+        // Final Value Fee
+        let ebayFees = (totalRevenue * feePercent) + this.EBAY_FIXED_FEE;
+
+        // Add Promoted Listings Fee (Ad rate is applied to total sale amt)
+        if (promoAdRate > 0) {
+            ebayFees += (totalRevenue * (promoAdRate / 100));
+        }
 
         const totalExpenses = shippingCost + itemCost + otherCosts + ebayFees;
         const netProfit = totalRevenue - totalExpenses;

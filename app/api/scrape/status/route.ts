@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const job = await getScrapeJobById(jobId);
+        const job = await getScrapeJobById(jobId, supabase);
 
         if (!job) {
             return NextResponse.json(

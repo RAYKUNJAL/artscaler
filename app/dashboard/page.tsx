@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import TestScraper from '@/components/TestScraper';
 import RecentScrapes from '@/components/RecentScrapes';
+import ArtGalleryGrid from '@/components/gallery/ArtGalleryGrid';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
     TrendingUp,
@@ -13,9 +13,7 @@ import {
     Activity,
     FileText,
     Calculator,
-    Eye,
     Zap,
-    ChevronRight,
     Sparkles,
     BarChart3,
     ArrowUpRight,
@@ -54,67 +52,22 @@ export default function Dashboard() {
                 return;
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                setLoading(false);
-                return;
+            const res = await fetch('/api/dashboard/stats');
+            const data = await res.json();
+
+            if (res.ok && data.stats) {
+                setStats({
+                    topStyles: data.stats.topStyles || [],
+                    topSizes: data.stats.topSizes || [],
+                    activeListings: data.stats.activeListings || 0,
+                    avgWvs: data.stats.globalPulse || 0,
+                    avgPrice: data.stats.marketValue / (data.stats.activeListings || 1),
+                    pulseAlerts: data.stats.activeAlerts || 0,
+                    estimatedMarketCap: data.stats.marketValue || 0,
+                });
+            } else {
+                console.error('Failed to load stats:', data.error);
             }
-
-            // Load styles with WVS (Pulse Velocity)
-            const { data: styles } = await supabase
-                .from('styles')
-                .select('style_term, avg_wvs, listing_count')
-                .order('avg_wvs', { ascending: false })
-                .limit(5);
-
-            // Load sizes with WVS
-            const { data: sizes } = await supabase
-                .from('sizes')
-                .select('size_cluster, avg_price, avg_wvs')
-                .order('avg_wvs', { ascending: false })
-                .limit(5);
-
-            // Load active listings count
-            const { count: activeListings } = await supabase
-                .from('active_listings')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_active', true);
-
-            // Load Pulse Alerts (High WVS opportunities)
-            const { count: pulseAlerts } = await supabase
-                .from('opportunity_feed')
-                .select('*', { count: 'exact', head: true })
-                .gte('wvs_score', 4);
-
-            const topStyles = (styles || []).map(s => ({
-                style: s.style_term,
-                avgWvs: s.avg_wvs || 0,
-                count: s.listing_count || 0,
-            }));
-
-            const topSizes = (sizes || []).map(s => ({
-                size: s.size_cluster,
-                avgPrice: s.avg_price || 0,
-                avgWvs: s.avg_wvs || 0,
-            }));
-
-            const avgWvs = topStyles.length > 0
-                ? topStyles.reduce((sum, s) => sum + s.avgWvs, 0) / topStyles.length
-                : 0;
-
-            const avgPrice = topSizes.length > 0
-                ? topSizes.reduce((sum, s) => sum + s.avgPrice, 0) / topSizes.length
-                : 0;
-
-            setStats({
-                topStyles,
-                topSizes,
-                activeListings: activeListings || 0,
-                avgWvs,
-                avgPrice,
-                pulseAlerts: pulseAlerts || 0,
-                estimatedMarketCap: (activeListings || 0) * avgPrice,
-            });
         } catch (error) {
             console.error('Error loading dashboard data:', error);
         } finally {
@@ -246,7 +199,18 @@ export default function Dashboard() {
                             </div>
                             <div className="space-y-4 md:space-y-6">
                                 {stats.topStyles.length === 0 ? (
-                                    <p className="text-gray-500 text-center py-8 md:py-12 italic text-sm">Waiting for market data...</p>
+                                    <div className="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
+                                        <div className="h-16 w-16 bg-blue-500/10 rounded-full flex items-center justify-center">
+                                            <Activity className="h-8 w-8 text-blue-500/50" />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-white font-bold">Waiting for market data...</p>
+                                            <p className="text-gray-500 text-sm mt-1">Run a scan in the Market Scanner to see trends.</p>
+                                        </div>
+                                        <Link href="/market-scanner" className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all uppercase tracking-widest">
+                                            Go to Scanner
+                                        </Link>
+                                    </div>
                                 ) : (
                                     stats.topStyles.map((item, index) => (
                                         <div key={item.style} className="space-y-2">
@@ -262,37 +226,49 @@ export default function Dashboard() {
                                             <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500"
-                                                    style={{ width: `${(item.avgWvs / 4) * 100}%` } as any}
-                                                />
+                                                    style={{ '--bar-width': `${Math.min((item.avgWvs / 10) * 100, 100)}%` } as React.CSSProperties}
+                                                >
+                                                    <div className="h-full w-[var(--bar-width)]" />
+                                                </div>
                                             </div>
                                         </div>
                                     ))
                                 )}
                             </div>
                         </div>
-
-                        <TestScraper />
                     </div>
 
                     <div className="space-y-6 md:space-y-8">
                         <RecentScrapes />
 
-                        {/* Premium Advice Card */}
+                        {/* Dynamic Strategy Card */}
                         <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 md:p-6">
                             <div className="h-10 w-10 bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center mb-4">
                                 <Sparkles className="h-5 w-5 text-amber-500" />
                             </div>
                             <h3 className="text-lg font-bold text-white mb-2">Pulse Strategy</h3>
-                            <p className="text-sm text-gray-400 leading-relaxed">
-                                Market velocity for <strong>Stencils</strong> is up 12% this week. We recommend updating your listing titles to include "Original Signed" to capture the current high-intent search volume.
-                            </p>
-                            <Link href="/trends" className="block w-full mt-6">
+                            <div className="text-sm text-gray-400 leading-relaxed">
+                                {stats.topStyles.length > 0 ? (
+                                    <>
+                                        Market velocity for <strong>{stats.topStyles[0].style}</strong> is currently at <strong>{stats.topStyles[0].avgWvs.toFixed(1)} WVS</strong>.
+                                        We recommend optimizing your listings with "Original Signed" tags to capture this momentum.
+                                    </>
+                                ) : (
+                                    "Aggregating market intelligence... Run a scan to receive tailored strategy advice."
+                                )}
+                            </div>
+                            <Link href="/dashboard/intelligence" className="block w-full mt-6">
                                 <button className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all">
                                     view full report
                                 </button>
                             </Link>
                         </div>
                     </div>
+                </div>
+
+                {/* VISUAL INTELLIGENCE GALLERY (FEATURE-VISUAL-001) */}
+                <div className="pt-8 md:pt-12">
+                    <ArtGalleryGrid limit={8} />
                 </div>
             </div>
         </DashboardLayout>

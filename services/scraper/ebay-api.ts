@@ -4,19 +4,25 @@
  * Much faster and more reliable than web scraping!
  */
 
+import { getEbayAccessToken } from '@/lib/ebay/oauth';
+
 export interface EbayApiListing {
+    id: string; // Add ID for better tracking
     title: string;
     soldPrice: number | null;
+    currentPrice: number | null; // Added for active listings
     shippingPrice: number | null;
     currency: string;
     isAuction: boolean;
     bidCount: number;
+    watcherCount: number; // Added for active listings
     soldDate: Date | null;
     itemUrl: string;
     searchKeyword: string;
     imageUrl?: string;
     condition?: string;
     location?: string;
+    listingType?: string;
 }
 
 export interface EbayApiOptions {
@@ -31,49 +37,128 @@ export class EbayApiService {
 
     constructor() {
         this.appId = process.env.EBAY_APP_ID || '';
-        this.environment = process.env.EBAY_ENVIRONMENT || 'SANDBOX';
+        this.environment = (process.env.EBAY_ENVIRONMENT || 'SANDBOX').toUpperCase();
 
-        // Sandbox vs Production URLs
+        // Sandbox vs Production URLs for Finding API
         this.baseUrl = this.environment === 'PRODUCTION'
             ? 'https://svcs.ebay.com/services/search/FindingService/v1'
             : 'https://svcs.sandbox.ebay.com/services/search/FindingService/v1';
 
         if (!this.appId) {
-            throw new Error('EBAY_APP_ID not configured in environment variables');
+            console.warn('⚠️ EBAY_APP_ID not configured. API calls will fail.');
         }
     }
 
     /**
-     * Search for sold listings using eBay Finding API
+     * Helper for fetching with retries and OAuth
      */
+    private async fetchWithRetry(url: string, options: any = {}, retries = 3): Promise<any> {
+        let lastError: any;
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                const token = await getEbayAccessToken();
+                const mergedOptions = {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        'Authorization': `Bearer ${token}`,
+                        'X-EBAY-SOA-SECURITY-APPNAME': this.appId,
+                        'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
+                    }
+                };
+
+                const response = await fetch(url, mergedOptions);
+
+                if (response.status === 429) {
+                    const retryAfter = response.headers.get('Retry-After');
+                    const wait = retryAfter ? parseInt(retryAfter) * 1000 : Math.pow(2, i) * 1000;
+                    console.log(`[eBay API] Rate limited. Retrying in ${wait}ms...`);
+                    await new Promise(r => setTimeout(r, wait));
+                    continue;
+                }
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    throw new Error(`eBay API error: ${response.status} ${response.statusText} - ${errorBody}`);
+                }
+
+                return await response.json();
+            } catch (err: any) {
+                lastError = err;
+                console.error(`[eBay API] Attempt ${i + 1} failed:`, err.message);
+                if (i < retries - 1) {
+                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                }
+            }
+        }
+        throw lastError;
+    }
+
     async searchSoldListings(options: EbayApiOptions): Promise<EbayApiListing[]> {
         const { keyword, maxResults = 100 } = options;
 
-        console.log(`🔍 Searching eBay API for: "${keyword}"`);
-        console.log(`   Environment: ${this.environment}`);
-        console.log(`   Max results: ${maxResults}`);
+        console.log(`🔍 Searching eBay API for SOLD: "${keyword}" (Env: ${this.environment})`);
 
         try {
-            const url = this.buildApiUrl(keyword, maxResults);
+            const params = new URLSearchParams({
+                'OPERATION-NAME': 'findCompletedItems',
+                'SERVICE-VERSION': '1.0.0',
+                'SECURITY-APPNAME': this.appId, // Still needed for some Finding API calls
+                'RESPONSE-DATA-FORMAT': 'JSON',
+                'REST-PAYLOAD': '',
+                'keywords': keyword,
+                'paginationInput.entriesPerPage': maxResults.toString(),
+                'sortOrder': 'EndTimeSoonest',
+                'itemFilter(0).name': 'SoldItemsOnly',
+                'itemFilter(0).value': 'true',
+                'itemFilter(1).name': 'Condition',
+                'itemFilter(1).value': '3000', // "Used" category mapping, often better than string
+            });
 
-            console.log('📡 Making API request...');
-            const response = await fetch(url);
+            const url = `${this.baseUrl}?${params.toString()}`;
+            const data = await this.fetchWithRetry(url);
 
-            if (!response.ok) {
-                throw new Error(`eBay API error: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            // Parse eBay API response
-            const listings = this.parseApiResponse(data, keyword);
-
+            const listings = this.parseApiResponse(data, 'findCompletedItemsResponse', keyword);
             console.log(`✓ Found ${listings.length} sold listings`);
             return listings;
 
         } catch (error: any) {
-            console.error('❌ eBay API error:', error);
-            throw new Error(`Failed to fetch from eBay API: ${error.message}`);
+            console.error('❌ eBay API Sold Search Failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Search for active listings using eBay Finding API
+     */
+    async searchActiveListings(options: EbayApiOptions): Promise<EbayApiListing[]> {
+        const { keyword, maxResults = 100 } = options;
+
+        console.log(`🔍 Searching eBay API for ACTIVE: "${keyword}" (Env: ${this.environment})`);
+
+        try {
+            const params = new URLSearchParams({
+                'OPERATION-NAME': 'findItemsByKeywords',
+                'SERVICE-VERSION': '1.0.0',
+                'SECURITY-APPNAME': this.appId,
+                'RESPONSE-DATA-FORMAT': 'JSON',
+                'REST-PAYLOAD': '',
+                'keywords': keyword,
+                'paginationInput.entriesPerPage': maxResults.toString(),
+                'sortOrder': 'BestMatch',
+            });
+
+            const url = `${this.baseUrl}?${params.toString()}`;
+            const data = await this.fetchWithRetry(url);
+
+            const listings = this.parseApiResponse(data, 'findItemsByKeywordsResponse', keyword);
+            console.log(`✓ Found ${listings.length} active listings`);
+            return listings;
+
+        } catch (error: any) {
+            console.error('❌ eBay API Active Search Failed:', error);
+            throw error;
         }
     }
 
@@ -123,33 +208,34 @@ export class EbayApiService {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`eBay API error: ${response.status}`);
 
-        const data = await response.json();
+        const data = await this.fetchWithRetry(url);
         const searchResult = data.findItemsAdvancedResponse?.[0]?.searchResult?.[0];
         const items = searchResult?.item || [];
 
         return items.map((item: any) => ({
+            id: item.itemId?.[0] || '',
             title: item.title?.[0] || '',
-            soldPrice: parseFloat(item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__ || '0'),
-            shippingPrice: 0, // Simplified
+            soldPrice: null,
+            currentPrice: parseFloat(item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__ || '0'),
+            shippingPrice: parseFloat(item.shippingInfo?.[0]?.shippingServiceCost?.[0]?.__value__ || '0'),
             currency: item.sellingStatus?.[0]?.currentPrice?.[0]?.['@currencyId'] || 'USD',
             isAuction: item.listingInfo?.[0]?.listingType?.[0] === 'Auction',
             bidCount: parseInt(item.listingInfo?.[0]?.bidCount?.[0] || '0'),
-            soldDate: null, // Active listing
+            watcherCount: parseInt(item.listingInfo?.[0]?.watchCount?.[0] || '0'),
+            soldDate: null,
             itemUrl: item.viewItemURL?.[0] || '',
             searchKeyword: `seller:${sellerName}`,
             imageUrl: item.galleryURL?.[0]
         }));
     }
 
-    /**
-     * Parse eBay API JSON response into our listing format
-     */
-    private parseApiResponse(data: any, keyword: string): EbayApiListing[] {
+    private parseApiResponse(data: any, rootKey: string, keyword: string): EbayApiListing[] {
         try {
-            const searchResult = data.findCompletedItemsResponse?.[0]?.searchResult?.[0];
+            const response = data[rootKey]?.[0];
+            const searchResult = response?.searchResult?.[0];
 
             if (!searchResult || searchResult['@count'] === '0') {
-                console.log('⚠️  No results found');
+                console.log(`⚠️ No results found for rootKey: ${rootKey}`);
                 return [];
             }
 
@@ -160,24 +246,28 @@ export class EbayApiService {
                 const shippingInfo = item.shippingInfo?.[0];
                 const listingInfo = item.listingInfo?.[0];
 
+                const currentPrice = parseFloat(sellingStatus?.currentPrice?.[0]?.__value__ || '0');
+
                 return {
+                    id: item.itemId?.[0] || '',
                     title: item.title?.[0] || '',
-                    soldPrice: parseFloat(sellingStatus?.currentPrice?.[0]?.__value__ || '0'),
+                    soldPrice: rootKey.includes('Completed') ? currentPrice : null,
+                    currentPrice: currentPrice,
                     shippingPrice: parseFloat(shippingInfo?.shippingServiceCost?.[0]?.__value__ || '0'),
                     currency: sellingStatus?.currentPrice?.[0]?.['@currencyId'] || 'USD',
-                    isAuction: listingInfo?.listingType?.[0] === 'Auction',
+                    isAuction: listingInfo?.listingType?.[0]?.includes('Auction') || false,
                     bidCount: parseInt(listingInfo?.bidCount?.[0] || '0'),
-                    soldDate: item.listingInfo?.[0]?.endTime?.[0]
-                        ? new Date(item.listingInfo[0].endTime[0])
-                        : null,
+                    watcherCount: parseInt(listingInfo?.watchCount?.[0] || '0'),
+                    soldDate: listingInfo?.endTime?.[0] ? new Date(listingInfo.endTime[0]) : null,
                     itemUrl: item.viewItemURL?.[0] || '',
                     searchKeyword: keyword,
                     imageUrl: item.galleryURL?.[0] || undefined,
                     condition: item.condition?.[0]?.conditionDisplayName?.[0] || undefined,
                     location: item.location?.[0] || undefined,
+                    listingType: listingInfo?.listingType?.[0] || 'FixedPrice',
                 };
             }).filter((listing: EbayApiListing) =>
-                listing.title && listing.soldPrice && listing.itemUrl
+                listing.title && listing.itemUrl
             );
 
         } catch (error: any) {

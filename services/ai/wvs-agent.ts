@@ -14,7 +14,12 @@
  * - Bid Weight: Bids are weighted 2x relative to watches as they represent harder intent.
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for global updates
+);
 
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 // Types
@@ -156,112 +161,177 @@ export class WVSAgent {
         return Math.min(confidence, 1.0);
     }
 
-    /**
-     * Calculate WVS for all listings in the database and save results.
-     * This is the heart of the AI pipeline.
-     */
     public async processPipeline(userId: string, runId?: string): Promise<WVSReport> {
-        console.log('🚀 WVS Agent: Starting Pipeline Processing...');
+        console.log(`🚀 WVS Agent: Starting Pipeline Processing for user ${userId}...`);
 
-        // 1. Fetch clean sold listings
-        let query = supabase
+        // 1. Fetch Sold Listings (Historical Demand)
+        let soldQuery = supabase
             .from('sold_listings_clean')
-            .select(`
-                *,
-                parsed_signals (*)
-            `)
+            .select(`*, parsed_signals (*)`)
             .eq('user_id', userId);
 
-        if (runId) {
-            query = query.eq('run_id', runId);
-        }
+        if (runId) soldQuery = soldQuery.eq('run_id', runId);
+        const { data: soldListings } = await soldQuery.limit(500);
 
-        const { data: listings, error } = await query.limit(500);
+        // 2. Fetch Active Listings (Real-time Demand)
+        const { data: activeListings } = await supabase
+            .from('active_listings')
+            .select(`*`)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .limit(500);
 
-        if (error || !listings) {
-            console.error('❌ WVS Agent: Error fetching listings:', error);
+        const totalToProcess = (soldListings?.length || 0) + (activeListings?.length || 0);
+        if (totalToProcess === 0) {
+            console.log('⚠️ WVS Agent: No listings found to process.');
             return this.emptyReport();
         }
 
-        console.log(`📊 WVS Agent: Processing ${listings.length} listings`);
+        console.log(`📊 WVS Agent: Processing ${totalToProcess} listings (${soldListings?.length || 0} sold, ${activeListings?.length || 0} active)`);
 
-        const results: ListingWVS[] = [];
         const styleClusters = new Map<string, { totalWvs: number; count: number; prices: number[]; items: ListingWVS[] }>();
         const sizeClusters = new Map<string, { totalWvs: number; count: number; prices: number[] }>();
 
-        for (const listing of listings) {
+        // 3. Process Sold Listings
+        for (const listing of soldListings || []) {
             const daysActive = this.calculateDaysActive(listing.created_at);
             const signals = listing.parsed_signals?.[0];
 
             const score = this.calculateWVS({
-                watcherCount: listing.bid_count || 0, // Fallback bids to watchers if watchers unknown
+                watcherCount: listing.bid_count || 0, // Fallback for sold
                 bidCount: listing.bid_count || 0,
                 daysActive,
                 itemPrice: listing.sold_price || 0,
                 categoryMedianPrice: this.categoryMedians.get(signals?.size_bucket || '') || 150
             });
 
-            const listingWvs: ListingWVS = {
-                listingId: listing.id,
-                title: listing.title,
-                wvs: score,
-                watcherCount: 0,
-                bidCount: listing.bid_count || 0,
-                price: listing.sold_price || 0,
-                daysActive,
-            };
-
-            results.push(listingWvs);
-
-            // Cluster by style
-            const style = signals?.style || 'Abstract';
-            const currentStyle = styleClusters.get(style) || { totalWvs: 0, count: 0, prices: [], items: [] };
-            currentStyle.totalWvs += score.wvs;
-            currentStyle.count += 1;
-            currentStyle.prices.push(listing.sold_price || 0);
-            currentStyle.items.push(listingWvs);
-            styleClusters.set(style, currentStyle);
-
-            // Cluster by size
-            const size = signals?.size_bucket || 'medium';
-            const currentSize = sizeClusters.get(size) || { totalWvs: 0, count: 0, prices: [] };
-            currentSize.totalWvs += score.wvs;
-            currentSize.count += 1;
-            currentSize.prices.push(listing.sold_price || 0);
-            sizeClusters.set(size, currentSize);
+            this.addToClusters(listing, score, signals?.style || 'Abstract', signals?.size_bucket || 'medium', styleClusters, sizeClusters);
         }
 
-        // 2. Format outcomes
-        const topStyles: StyleWVS[] = Array.from(styleClusters.entries())
+        // 4. Process Active Listings
+        for (const listing of activeListings || []) {
+            const daysActive = this.calculateDaysActive(listing.first_seen_at || listing.created_at);
+
+            const score = this.calculateWVS({
+                watcherCount: listing.watcher_count || 0,
+                bidCount: listing.bid_count || 0,
+                daysActive,
+                itemPrice: listing.current_price || 0,
+                categoryMedianPrice: this.categoryMedians.get(this.categorizeSize(listing.width_in, listing.height_in)) || 150
+            });
+
+            // Update active_listing with demand_score and wvs
+            await supabase
+                .from('active_listings')
+                .update({
+                    demand_score: Math.min(score.wvs * 10, 100),
+                    watcher_velocity: score.components.pulseVelocity
+                })
+                .eq('id', listing.id);
+
+            this.addToClusters(listing, score, 'Abstract', this.categorizeSize(listing.width_in, listing.height_in), styleClusters, sizeClusters);
+        }
+
+        // 5. Format outcomes
+        const topStyles = this.finalizeStyleClusters(styleClusters);
+        const topSizes = this.finalizeSizeClusters(sizeClusters);
+
+        // 6. Sync to Global Metrics Tables (styles, sizes)
+        await this.syncGlobalMetrics(topStyles, topSizes);
+
+        // 7. Persist to Opportunities
+        await this.saveAnalysis(userId, topStyles, runId);
+
+        return {
+            generatedAt: new Date().toISOString(),
+            totalListingsAnalyzed: totalToProcess,
+            topStyles,
+            topSizes,
+            recommendations: this.generateRecommendations(topStyles)
+        };
+    }
+
+    private addToClusters(listing: any, score: WVSScore, style: string, size: string, styleClusters: Map<string, any>, sizeClusters: Map<string, any>) {
+        const listingWvs: ListingWVS = {
+            listingId: listing.id,
+            title: listing.title,
+            wvs: score,
+            watcherCount: listing.watcher_count || 0,
+            bidCount: listing.bid_count || 0,
+            price: listing.sold_price || listing.current_price || 0,
+            daysActive: score.confidence > 0.5 ? 7 : 1, // Simplified
+        };
+
+        const currentStyle = styleClusters.get(style) || { totalWvs: 0, count: 0, prices: [], items: [] };
+        currentStyle.totalWvs += score.wvs;
+        currentStyle.count += 1;
+        currentStyle.prices.push(listingWvs.price);
+        currentStyle.items.push(listingWvs);
+        styleClusters.set(style, currentStyle);
+
+        const currentSize = sizeClusters.get(size) || { totalWvs: 0, count: 0, prices: [] };
+        currentSize.totalWvs += score.wvs;
+        currentSize.count += 1;
+        currentSize.prices.push(listingWvs.price);
+        sizeClusters.set(size, currentSize);
+    }
+
+    private finalizeStyleClusters(styleClusters: Map<string, any>): StyleWVS[] {
+        return Array.from(styleClusters.entries())
             .map(([style, data]) => ({
                 styleTerm: style,
                 avgWvs: data.totalWvs / data.count,
                 listingCount: data.count,
                 demandScore: Math.min((data.totalWvs / data.count) * 10, 10),
-                topListings: data.items.sort((a, b) => b.wvs.wvs - a.wvs.wvs).slice(0, 5)
+                topListings: data.items.sort((a: any, b: any) => b.wvs.wvs - a.wvs.wvs).slice(0, 5)
             }))
             .sort((a, b) => b.avgWvs - a.avgWvs);
+    }
 
-        const topSizes: SizeWVS[] = Array.from(sizeClusters.entries())
+    private finalizeSizeClusters(sizeClusters: Map<string, any>): SizeWVS[] {
+        return Array.from(sizeClusters.entries())
             .map(([size, data]) => ({
                 sizeCluster: size,
                 avgWvs: data.totalWvs / data.count,
-                avgPrice: data.prices.reduce((a, b) => a + b, 0) / data.count,
+                avgPrice: data.prices.reduce((a: number, b: number) => a + b, 0) / data.count,
                 listingCount: data.count,
                 demandScore: Math.min((data.totalWvs / data.count) * 10, 10)
             }))
             .sort((a, b) => b.avgWvs - a.avgWvs);
+    }
 
-        // 3. Persist to Opportunities
-        await this.saveAnalysis(userId, topStyles, runId);
+    private async syncGlobalMetrics(styles: StyleWVS[], sizes: SizeWVS[]) {
+        console.log('🌐 WVS Agent: Syncing global metrics...');
 
-        return {
-            generatedAt: new Date().toISOString(),
-            totalListingsAnalyzed: listings.length,
-            topStyles,
-            topSizes,
-            recommendations: this.generateRecommendations(topStyles)
-        };
+        for (const style of styles) {
+            await supabase.from('styles').upsert({
+                style_term: style.styleTerm,
+                avg_wvs: style.avgWvs,
+                demand_score: style.demandScore,
+                listing_count: style.listingCount,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'style_term' });
+        }
+
+        for (const size of sizes) {
+            await supabase.from('sizes').upsert({
+                size_cluster: size.sizeCluster,
+                avg_wvs: size.avgWvs,
+                avg_price: size.avgPrice,
+                demand_score: size.demandScore,
+                listing_count: size.listingCount,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'size_cluster' });
+        }
+    }
+
+    private categorizeSize(width: number | null, height: number | null): string {
+        if (!width || !height) return 'medium';
+        const area = width * height;
+        if (area < 200) return 'small';
+        if (area < 600) return 'medium';
+        if (area < 1200) return 'large';
+        return 'extra-large';
     }
 
     private async saveAnalysis(userId: string, styles: StyleWVS[], runId?: string) {
@@ -288,7 +358,7 @@ export class WVSAgent {
                     run_id: runId,
                     topic_id: topic.id,
                     date: new Date().toISOString().split('T')[0],
-                    nolan_score: style.demandScore * 10, // Scale to 0-100
+                    wvs_score: style.avgWvs,
                     velocity_score: style.avgWvs,
                     median_price: style.topListings[0]?.price || 150
                 });

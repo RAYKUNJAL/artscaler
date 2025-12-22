@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS user_saved_opportunities (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   topic_label TEXT NOT NULL,
-  nolan_score NUMERIC,
+  wvs_score NUMERIC,
   notes TEXT,
   status TEXT DEFAULT 'saved',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

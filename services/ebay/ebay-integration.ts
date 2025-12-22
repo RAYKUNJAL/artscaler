@@ -212,26 +212,36 @@ export class EbayIntegrationService {
     }
 
     /**
-     * Calculate eBay fees for a listing
+     * Calculate eBay fees for a listing (2024 Managed Payments)
+     * Category: Art (Paintings, Prints, etc.)
+     * Standard Rate: 13.25% on total amount (item + shipping + taxes) + $0.30 transaction fee
      */
-    static calculateFees(salePrice: number, shippingCost: number): {
+    static calculateFees(salePrice: number, shippingCost: number, category: string = 'Art'): {
         ebayFee: number;
-        paypalFee: number;
+        regulatoryFee: number;
         totalFees: number;
     } {
+        // 2024 eBay Rates for Art category
         const ebayFeeRate = 0.1325; // 13.25%
         const ebayFixedFee = 0.30;
-        const paypalFeeRate = 0.0349; // 3.49%
-        const paypalFixedFee = 0.49;
+        const regulatoryFeeRate = 0.0035; // 0.35% (approx)
 
-        const totalRevenue = salePrice + shippingCost;
-        const ebayFee = (totalRevenue * ebayFeeRate) + ebayFixedFee;
-        const paypalFee = (totalRevenue * paypalFeeRate) + paypalFixedFee;
+        const totalAmount = salePrice + shippingCost;
+
+        let ebayFee = (totalAmount * ebayFeeRate) + ebayFixedFee;
+
+        // Tiered pricing for items over $7,500
+        if (totalAmount > 7500) {
+            const aboveLimit = totalAmount - 7500;
+            ebayFee = (7500 * ebayFeeRate) + (aboveLimit * 0.07) + ebayFixedFee;
+        }
+
+        const regulatoryFee = totalAmount * regulatoryFeeRate;
 
         return {
             ebayFee: parseFloat(ebayFee.toFixed(2)),
-            paypalFee: parseFloat(paypalFee.toFixed(2)),
-            totalFees: parseFloat((ebayFee + paypalFee).toFixed(2))
+            regulatoryFee: parseFloat(regulatoryFee.toFixed(2)),
+            totalFees: parseFloat((ebayFee + regulatoryFee).toFixed(2))
         };
     }
 }

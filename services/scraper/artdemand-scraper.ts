@@ -99,7 +99,7 @@ export class ArtdemandScraper {
                 allListings.push(...(listings as ArtdemandListing[]));
 
                 if (p < maxPages) {
-                    await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+                    await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
                 }
             }
         } finally {
@@ -110,73 +110,87 @@ export class ArtdemandScraper {
     }
 
     async processAndSave(listings: ArtdemandListing[], userId: string) {
-        console.log(`⚙️ Processing ${listings.length} listings with AI...`);
+        console.log(`⚙️ Processing ${listings.length} listings with AI in batch mode...`);
 
-        for (const l of listings) {
-            // 1. Extract Attributes
-            const styles = this.miner.extractStyles(l.title);
+        // 1. Prepare all listings for batch upsert
+        const listingsToUpsert = listings.map(l => {
             const sizes = this.miner.extractSizes(l.title);
             const mediums = this.miner.extractMediums(l.title);
 
-            // 2. Save to active_listings
-            const { data: savedListing, error: listingError } = await supabase
-                .from('active_listings')
-                .upsert({
-                    listing_id: l.listingId,
-                    user_id: userId,
-                    title: l.title,
-                    item_url: l.itemUrl,
-                    current_price: l.price,
-                    watcher_count: l.watcherCount,
-                    bid_count: l.bidCount,
-                    listing_type: l.listingType,
-                    is_active: true,
-                    last_updated_at: new Date().toISOString()
-                }, { onConflict: 'listing_id' })
-                .select()
-                .single();
+            return {
+                listing_id: l.listingId,
+                user_id: userId,
+                title: l.title,
+                item_url: l.itemUrl,
+                current_price: l.price,
+                watcher_count: l.watcherCount,
+                bid_count: l.bidCount,
+                listing_type: l.listingType,
+                is_active: true,
+                last_updated_at: new Date().toISOString(),
+                width_in: sizes.length > 0 ? sizes[0].width : null,
+                height_in: sizes.length > 0 ? sizes[0].height : null,
+                material: mediums.length > 0 ? mediums[0] : null
+            };
+        });
 
-            if (listingError) {
-                console.error(`Error saving listing ${l.listingId}:`, listingError);
-                continue;
-            }
+        // 2. Batch Upsert into active_listings
+        const { data: savedListings, error: batchError } = await supabase
+            .from('active_listings')
+            .upsert(listingsToUpsert, { onConflict: 'listing_id' })
+            .select('id, title, listing_id');
 
-            // 3. Save Junctions (Listing Styles)
-            if (styles.length > 0) {
-                for (const styleTerm of styles) {
-                    // Get or create style id
-                    const { data: styleData } = await supabase
-                        .from('styles')
-                        .select('id')
-                        .eq('style_term', styleTerm)
-                        .single();
+        if (batchError) {
+            console.error('Batch upsert error:', batchError);
+            return;
+        }
 
-                    if (styleData) {
-                        await supabase
-                            .from('listing_styles')
-                            .upsert({
-                                listing_id: savedListing.id,
-                                style_id: styleData.id,
+        console.log(`✓ Batch saved ${savedListings?.length} listings`);
+
+        // 3. Extract and Map Styles in bulk
+        const styleJunctions: any[] = [];
+        const allPossibleStyles = new Set<string>();
+
+        listings.forEach(l => {
+            const styles = this.miner.extractStyles(l.title);
+            styles.forEach(s => allPossibleStyles.add(s));
+        });
+
+        if (allPossibleStyles.size > 0) {
+            // Get all existing styles to map names to IDs
+            const { data: styleMap } = await supabase
+                .from('styles')
+                .select('id, style_term')
+                .in('style_term', Array.from(allPossibleStyles));
+
+            if (styleMap && styleMap.length > 0) {
+                const nameToId = Object.fromEntries(styleMap.map(s => [s.style_term, s.id]));
+
+                savedListings?.forEach(saved => {
+                    // Re-extract styles for this specific title
+                    const styles = this.miner.extractStyles(saved.title);
+                    styles.forEach(styleTerm => {
+                        const styleId = nameToId[styleTerm];
+                        if (styleId) {
+                            styleJunctions.push({
+                                listing_id: saved.id,
+                                style_id: styleId,
                                 confidence: 1.0
-                            }, { onConflict: 'listing_id,style_id' });
-                    }
-                }
-            }
+                            });
+                        }
+                    });
+                });
 
-            // 4. Update Physical Specs on Active Listing
-            if (sizes.length > 0) {
-                await supabase
-                    .from('active_listings')
-                    .update({
-                        width_in: sizes[0].width,
-                        height_in: sizes[0].height,
-                        material: mediums.length > 0 ? mediums[0] : null
-                    })
-                    .eq('id', savedListing.id);
+                if (styleJunctions.length > 0) {
+                    await supabase
+                        .from('listing_styles')
+                        .upsert(styleJunctions, { onConflict: 'listing_id,style_id' });
+                    console.log(`✓ Batch saved ${styleJunctions.length} style relations`);
+                }
             }
         }
 
-        // 5. Trigger WVS Calculation for the whole style/size ecosystem
+        // 4. Trigger WVS Calculation
         console.log('📊 Recalculating WVS scores...');
         await this.wvsAgent.processPipeline(userId);
     }

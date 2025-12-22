@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
-import { getEbayApi } from '@/services/scraper/ebay-api';
-import { EbayListing } from '@/services/scraper/ebay-scraper';
+import { ebayApiClient } from '@/services/ebay/ebay-api-client';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
 
 export async function POST(request: NextRequest) {
     try {
-        // Initialize Supabase
         const supabase = await createServerClient();
-
-        // Get user session the robust way
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
@@ -40,7 +39,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log(`🎯 Starting eBay ${mode} scrape for user:`, user.id, 'keyword:', keyword);
+        console.log(`🎯 Starting eBay ${mode} API scrape for user: ${user.id} keyword: ${keyword}`);
 
         // Record usage
         await PricingService.recordScrape(supabase, user.id);
@@ -57,10 +56,10 @@ export async function POST(request: NextRequest) {
             .select()
             .single();
 
-        if (jobError) {
+        if (jobError || !job) {
             console.error('Job creation error in /api/scrape/start:', jobError);
             return NextResponse.json(
-                { error: `Database Error: Failed to create scrape job. Details: ${jobError.message}` },
+                { error: `Database Error: Failed to create scrape job. Details: ${jobError?.message || 'Unknown'}` },
                 { status: 500 }
             );
         }
@@ -96,126 +95,155 @@ async function runEbayApiScraper(jobId: string, userId: string, keyword: string,
     const supabase = await createServerClient();
 
     try {
-        console.log(`🤖 Starting scrape (mode: ${mode}) for job ${jobId}...`);
+        console.log(`🤖 Starting API scrape (mode: ${mode}) for job ${jobId}...`);
+
+        const { PatternMiner } = await import('@/services/ai/pattern-miner');
+        const miner = new PatternMiner();
+        const { getWVSAgent } = await import('@/services/ai/wvs-agent');
+        const wvsAgent = getWVSAgent();
+
+        let listingsCount = 0;
 
         if (mode === 'active') {
-            const { getArtdemandScraper } = await import('@/services/scraper/artdemand-scraper');
-            const scraper = getArtdemandScraper();
-            await scraper.initialize();
+            const listings = await ebayApiClient.findActiveItems(keyword, 100);
+            listingsCount = listings.length;
+            console.log(`✓ API found ${listings.length} active listings for ${keyword}`);
 
-            try {
-                // Scrape active listings
-                const listings = await scraper.scrapeActive(keyword, 2);
-                console.log(`✓ Scraped ${listings.length} active listings for ${keyword}`);
+            if (listings.length > 0) {
+                const listingsToUpsert = listings.map(l => {
+                    const sizes = miner.extractSizes(l.title);
+                    const mediums = miner.extractMediums(l.title);
 
-                // Process and save with AI
-                await scraper.processAndSave(listings, userId);
-                console.log(`✓ Processed and saved active listings for ${keyword}`);
-
-                // Update job status
-                await supabase
-                    .from('scrape_jobs')
-                    .update({
-                        status: 'completed',
-                        completed_at: new Date().toISOString(),
-                        pages_scraped: 2,
-                        items_found: listings.length,
-                    })
-                    .eq('id', jobId);
-
-            } finally {
-                await scraper.close();
-            }
-        } else {
-            // Updated Sold Listing Flow using Enhanced EbayScraper with Playwright/Headless Fallback
-            const { getEbayScraper } = await import('@/services/scraper/ebay-scraper');
-            const scraper = getEbayScraper();
-            await scraper.initialize();
-
-            try {
-                const listings = await scraper.scrape({
-                    keyword,
-                    maxPages: 2,
-                    delayMs: 3000
+                    return {
+                        listing_id: l.itemId,
+                        user_id: userId,
+                        title: l.title,
+                        item_url: l.itemUrl,
+                        current_price: l.soldPrice, // Note: using soldPrice field from client for active price
+                        bid_count: l.bidCount,
+                        listing_type: l.listingType === 'Auction' ? 'Auction' : 'FixedPrice',
+                        is_active: true,
+                        last_updated_at: new Date().toISOString(),
+                        width_in: sizes.length > 0 ? sizes[0].width : null,
+                        height_in: sizes.length > 0 ? sizes[0].height : null,
+                        material: mediums.length > 0 ? mediums[0] : (l.condition || null),
+                        image_url: l.imageUrl
+                    };
                 });
 
-                console.log(`✓ Scraped ${listings.length} sold listings for ${keyword}`);
+                const { data: savedListings, error: batchError } = await supabase
+                    .from('active_listings')
+                    .upsert(listingsToUpsert, { onConflict: 'listing_id' })
+                    .select('id, title, listing_id');
 
-                if (listings.length > 0) {
-                    // 1. Save to raw table
-                    const records = listings.map((listing: EbayListing) => ({
-                        user_id: userId,
-                        title: listing.title,
-                        sold_price: listing.soldPrice,
-                        shipping_price: listing.shippingPrice,
-                        currency: listing.currency,
-                        is_auction: listing.isAuction,
-                        bid_count: listing.bidCount,
-                        sold_date: listing.soldDate,
-                        item_url: listing.itemUrl,
-                        search_keyword: listing.searchKeyword,
-                    }));
+                if (batchError) {
+                    console.error('Batch upsert error:', batchError);
+                } else if (savedListings) {
+                    console.log(`✓ Saved ${savedListings.length} active listings`);
 
-                    const { error: insertError } = await supabase
-                        .from('ebay_sold_listings')
-                        .insert(records);
+                    // Style extraction logic
+                    const styleJunctions: any[] = [];
+                    const allPossibleStyles = new Set<string>();
 
-                    if (insertError) throw insertError;
+                    listings.forEach(l => {
+                        const styles = miner.extractStyles(l.title);
+                        styles.forEach(s => allPossibleStyles.add(s));
+                    });
 
-                    // 2. Also save to the "clean" pipeline table for WVS Analysis
-                    const cleanRecords = listings.map((listing: EbayListing) => ({
-                        user_id: userId,
-                        title: listing.title,
-                        sold_price: listing.soldPrice,
-                        shipping_price: listing.shippingPrice,
-                        currency: listing.currency,
-                        is_auction: listing.isAuction,
-                        bid_count: listing.bidCount,
-                        sold_date: listing.soldDate?.toISOString().split('T')[0],
-                        item_url: listing.itemUrl,
-                        search_keyword: listing.searchKeyword,
-                    }));
+                    if (allPossibleStyles.size > 0) {
+                        const { data: styleMap } = await supabase
+                            .from('styles')
+                            .select('id, style_term')
+                            .in('style_term', Array.from(allPossibleStyles));
 
-                    await supabase.from('sold_listings_clean').insert(cleanRecords);
+                        if (styleMap && styleMap.length > 0) {
+                            const nameToId = Object.fromEntries(styleMap.map(s => [s.style_term, s.id]));
+                            savedListings.forEach(saved => {
+                                const styles = miner.extractStyles(saved.title);
+                                styles.forEach(styleTerm => {
+                                    const styleId = nameToId[styleTerm];
+                                    if (styleId) {
+                                        styleJunctions.push({
+                                            listing_id: saved.id,
+                                            style_id: styleId,
+                                            confidence: 1.0
+                                        });
+                                    }
+                                });
+                            });
 
-                    // 3. Run Parser on new listings
-                    const { getParserAgent } = await import('@/services/ai/parser-agent');
-                    const parser = getParserAgent();
-                    await parser.parseListings(supabase, 'manual-run', userId);
+                            if (styleJunctions.length > 0) {
+                                await supabase
+                                    .from('listing_styles')
+                                    .upsert(styleJunctions, { onConflict: 'listing_id,style_id' });
+                            }
+                        }
+                    }
                 }
+            }
+        } else {
+            const listings = await ebayApiClient.findCompletedItems(keyword, 100);
+            listingsCount = listings.length;
 
-                // Update job status
-                await supabase
-                    .from('scrape_jobs')
-                    .update({
-                        status: 'completed',
-                        completed_at: new Date().toISOString(),
-                        pages_scraped: 2,
-                        items_found: listings.length,
-                    })
-                    .eq('id', jobId);
+            console.log(`✓ API found ${listings.length} sold listings for ${keyword}`);
 
-                // 4. Trigger WVS Pipeline for this user
-                try {
-                    const { getWVSAgent } = await import('@/services/ai/wvs-agent');
-                    const wvsAgent = getWVSAgent();
-                    await wvsAgent.processPipeline(userId);
-                    console.log(`✅ WVS Analysis completed for user: ${userId}`);
-                } catch (wvsError) {
-                    console.error('❌ WVS Pipeline failed:', wvsError);
-                }
+            if (listings.length > 0) {
+                const records = listings.map(l => ({
+                    user_id: userId,
+                    title: l.title,
+                    sold_price: l.soldPrice,
+                    shipping_price: l.shippingPrice || 0,
+                    currency: l.currency || 'USD',
+                    is_auction: l.listingType === 'Auction',
+                    bid_count: l.bidCount || 0,
+                    sold_date: l.soldDate,
+                    item_url: l.itemUrl,
+                    search_keyword: keyword,
+                    image_url: l.imageUrl
+                }));
 
-            } finally {
-                await scraper.close();
+                const { error: insertError } = await supabase
+                    .from('ebay_sold_listings')
+                    .insert(records);
+
+                if (insertError) throw insertError;
+
+                const cleanRecords = records.map(r => ({
+                    ...r,
+                    sold_date: r.sold_date ? new Date(r.sold_date).toISOString().split('T')[0] : null
+                }));
+
+                await supabase.from('sold_listings_clean').insert(cleanRecords);
+
+                const { getParserAgent } = await import('@/services/ai/parser-agent');
+                const parser = getParserAgent();
+                await parser.parseListings(supabase, 'manual-run', userId);
             }
         }
 
-        console.log(`✅ Scrape job ${jobId} completed successfully`);
+        // Update job status
+        await supabase
+            .from('scrape_jobs')
+            .update({
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                items_found: listingsCount,
+            })
+            .eq('id', jobId);
+
+        // Always trigger WVS Pipeline
+        try {
+            const { getWVSAgent } = await import('@/services/ai/wvs-agent');
+            const wvsAgent = getWVSAgent();
+            await wvsAgent.processPipeline(userId);
+            console.log(`✅ WVS Analysis completed for user: ${userId}`);
+        } catch (wvsError) {
+            console.error('❌ WVS Pipeline failed:', wvsError);
+        }
 
     } catch (error: any) {
         console.error(`❌ Scraper error for job ${jobId}:`, error);
 
-        // Update job with error
         await supabase
             .from('scrape_jobs')
             .update({

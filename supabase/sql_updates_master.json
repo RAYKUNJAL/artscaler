@@ -1,0 +1,24 @@
+{
+    "project": "ArtIntel",
+    "version": "2.0.0",
+    "description": "Master record of SQL updates for the Unified WVS Protocol.",
+    "updates": [
+        {
+            "file": "supabase/FINAL_WVS_PROTOCOL.sql",
+            "change_type": "MIGRATION",
+            "description": "Standardizes all tables by renaming legacy 'nolan_score' columns to 'wvs_score' and dropping redundant duplicates. Ensures 0-10 scale platform-wide."
+        },
+        {
+            "file": "supabase/SEED_FOUNDATION.sql",
+            "change_type": "DATA_SEEDING",
+            "description": "Updated to use 'wvs_score' and 0-5 demand labels accurately."
+        },
+        {
+            "component": "Trends Page",
+            "change_type": "UI_REFINEMENT",
+            "description": "Switched from nolan_score/10 to direct wvs_score fetch for accurate pulse velocity display."
+        }
+    ],
+    "standard_scale": "0.0 to 10.0 (WVS)",
+    "hot_threshold": 4.5
+}

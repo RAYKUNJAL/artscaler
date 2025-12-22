@@ -129,9 +129,9 @@ export default function MarketScanner() {
     }
 
     const getWvsColor = (wvs: number) => {
-        if (wvs > 50) return 'text-green-400';
-        if (wvs > 20) return 'text-blue-400';
-        if (wvs > 10) return 'text-yellow-400';
+        if (wvs >= 7) return 'text-green-400';
+        if (wvs >= 4) return 'text-blue-400';
+        if (wvs >= 2) return 'text-yellow-400';
         return 'text-red-400';
     };
 

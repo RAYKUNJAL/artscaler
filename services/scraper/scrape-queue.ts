@@ -51,8 +51,8 @@ export async function createScrapeJob(params: CreateScrapeJobParams): Promise<Sc
 /**
  * Get pending scrape jobs (for cron processor)
  */
-export async function getPendingScrapeJobs(limit: number = 10): Promise<ScrapeJob[]> {
-    const { data, error } = await supabase
+export async function getPendingScrapeJobs(limit: number = 10, client = supabase): Promise<ScrapeJob[]> {
+    const { data, error } = await client
         .from('scrape_jobs')
         .select('*')
         .eq('status', 'pending')
@@ -72,9 +72,10 @@ export async function getPendingScrapeJobs(limit: number = 10): Promise<ScrapeJo
  */
 export async function updateScrapeJob(
     jobId: string,
-    updates: Partial<ScrapeJob>
+    updates: Partial<ScrapeJob>,
+    client = supabase
 ): Promise<void> {
-    const { error } = await supabase
+    const { error } = await client
         .from('scrape_jobs')
         .update(updates)
         .eq('id', jobId);
@@ -87,8 +88,8 @@ export async function updateScrapeJob(
 /**
  * Get user's scrape jobs
  */
-export async function getUserScrapeJobs(userId: string, limit: number = 20): Promise<ScrapeJob[]> {
-    const { data, error } = await supabase
+export async function getUserScrapeJobs(userId: string, limit: number = 20, client = supabase): Promise<ScrapeJob[]> {
+    const { data, error } = await client
         .from('scrape_jobs')
         .select('*')
         .eq('user_id', userId)
@@ -106,13 +107,13 @@ export async function getUserScrapeJobs(userId: string, limit: number = 20): Pro
 /**
  * Check if user can scrape (within monthly limits)
  */
-async function checkScrapeLimit(userId: string): Promise<boolean> {
+async function checkScrapeLimit(userId: string, client = supabase): Promise<boolean> {
     // Get current month's usage
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const { data: usage, error } = await supabase
+    const { data: usage, error } = await client
         .from('user_usage_tracking')
         .select('scrapes_used, scrapes_limit')
         .eq('user_id', userId)
@@ -130,12 +131,8 @@ async function checkScrapeLimit(userId: string): Promise<boolean> {
 /**
  * Increment user's scrape usage
  */
-export async function incrementScrapeUsage(userId: string): Promise<void> {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { error } = await supabase.rpc('increment_usage', {
+export async function incrementScrapeUsage(userId: string, client = supabase): Promise<void> {
+    const { error } = await client.rpc('increment_usage', {
         limit_type: 'scrapes',
         increment: 1,
     });
@@ -148,8 +145,8 @@ export async function incrementScrapeUsage(userId: string): Promise<void> {
 /**
  * Get scrape job by ID
  */
-export async function getScrapeJobById(jobId: string): Promise<ScrapeJob | null> {
-    const { data, error } = await supabase
+export async function getScrapeJobById(jobId: string, client = supabase): Promise<ScrapeJob | null> {
+    const { data, error } = await client
         .from('scrape_jobs')
         .select('*')
         .eq('id', jobId)

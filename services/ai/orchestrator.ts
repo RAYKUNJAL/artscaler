@@ -16,6 +16,7 @@ import { getClusteringAgent } from './clustering-agent';
 import { getWVSAgent } from './wvs-agent';
 import { getListingGeneratorAgent } from './listing-generator-agent';
 import { getPublisherAgent } from './publisher-agent';
+import { getVisualAgent } from './visual-agent';
 
 export class PulseOrchestrator {
     /**
@@ -66,7 +67,16 @@ export class PulseOrchestrator {
             const report = await wvsAgent.processPipeline(userId, runId);
             console.log(`✓ Generated Pulse Velocity Report: ${report.totalListingsAnalyzed} analyzed`);
 
-            // 6. Template Generation
+            // 6. Visual Analysis (New Visual Gallery Logic)
+            try {
+                const visualAgent = getVisualAgent();
+                const processedImages = await visualAgent.processVisualIntelligence(supabase, userId, 25);
+                console.log(`✓ Analyzed ${processedImages} artwork images visually`);
+            } catch (vError) {
+                console.error('⚠ Visual Intelligence step failed (non-critical):', vError);
+            }
+
+            // 7. Template Generation
             const generatorAgent = getListingGeneratorAgent();
             // In V2 we iterate over discovered clusters to build templates
             const { data: clusters } = await supabase

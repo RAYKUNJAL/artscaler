@@ -66,21 +66,27 @@ async function audit() {
             const duration = (performance.now() - start).toFixed(0);
 
             const status = res.status;
-            const statusIcon = status === 200 ? '✅' : (status === 404 ? '❌' : '⚠️');
+
+            // Success conditions:
+            // 200: OK
+            // 401/403: Protected (Passed Audit if it returns correct Auth error)
+            const isSuccess = status === 200 || status === 401 || status === 403;
+            const statusIcon = status === 200 ? '✅' : (isSuccess ? '🔒' : (status === 404 ? '❌' : '⚠️'));
+            const statusLabel = isSuccess ? 'Passed' : 'Failed';
 
             console.log(`${statusIcon} ${status} ${route.padEnd(40)} ${duration}ms`);
 
-            if (status === 200) {
+            if (isSuccess) {
                 passed++;
             } else {
                 failed++;
-                errors.push({ route, status, statusText: res.statusText });
+                errors.push({ route, status, statusText: res.statusText, result: statusLabel });
             }
 
         } catch (error: any) {
             console.log(`❌ ??? ${route.padEnd(40)} Connection Failed`);
             failed++;
-            errors.push({ route, status: 0, error: error.message });
+            errors.push({ route, status: 0, error: error.message, result: 'Failed' });
         }
     }
 
@@ -88,11 +94,18 @@ async function audit() {
     console.log(`📊 Audit Summary: ${passed} Passed, ${failed} Failed`);
 
     if (failed > 0) {
-        console.log('\n🚨 Failures detected:');
+        console.log('\n🚨 Critical failures detected (404/500):');
         console.table(errors);
+
+        // If the only failure is the test blog post, provide instructions
+        if (errors.length === 1 && errors[0].route.includes('test-blog-post')) {
+            console.log('\n💡 Tip: "/blog/test-blog-post" returned 404. This is expected if you haven\'t run');
+            console.log('   the blog migrations yet. Run migrations in Supabase to enable this feature.');
+        }
+
         process.exit(1);
     } else {
-        console.log('\n✨ All systems nominal.');
+        console.log('\n✨ All systems nominal. All routes reachable or protected.');
         process.exit(0);
     }
 }

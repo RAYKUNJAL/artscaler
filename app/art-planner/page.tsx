@@ -80,14 +80,14 @@ export default function ArtPlanner() {
     };
 
     const getWvsColor = (score: number) => {
-        if (score >= 4) return 'text-orange-500';
-        if (score >= 2) return 'text-yellow-500';
+        if (score >= 7) return 'text-orange-500';
+        if (score >= 4) return 'text-yellow-500';
         return 'text-blue-500';
     };
 
     const getWvsLabel = (score: number) => {
-        if (score >= 4) return 'Hot Pulse';
-        if (score >= 2) return 'Solid Demand';
+        if (score >= 7) return 'Hot Pulse';
+        if (score >= 4) return 'Solid Demand';
         return 'Steady Velocity';
     };
 
@@ -161,7 +161,7 @@ export default function ArtPlanner() {
                                                 <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
-                                                        style={{ width: `${Math.min(rec.wvs * 20, 100)}%` }}
+                                                        style={{ width: `${Math.min(rec.wvs * 10, 100)}%` }}
                                                     />
                                                 </div>
                                                 <span className="text-sm font-bold text-white">{rec.wvs.toFixed(1)}</span>
@@ -204,8 +204,8 @@ export default function ArtPlanner() {
                                         onClick={() => addToQueue(rec)}
                                         disabled={isAdding === rec.id || addedIds.has(rec.id)}
                                         className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all duration-300 ${addedIds.has(rec.id)
-                                                ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-default'
-                                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30'
+                                            ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-default'
+                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30'
                                             }`}
                                     >
                                         {isAdding === rec.id ? (

@@ -48,8 +48,7 @@ It stands for Watch Velocity Score...
             meta_description: 'A test post about AI and Art.',
             keywords: ['AI', 'Art', 'Market'],
             is_published: true,
-            published_at: new Date().toISOString(),
-            wvs_topic_id: null // optional
+            published_at: new Date().toISOString()
         });
 
     if (error) {

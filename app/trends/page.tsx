@@ -46,7 +46,7 @@ export default function Trends() {
                 .from('topic_scores_daily')
                 .select(`
                     topic_id,
-                    nolan_score,
+                    wvs_score,
                     velocity_score,
                     median_price,
                     date,
@@ -55,7 +55,7 @@ export default function Trends() {
                     )
                 `)
                 .order('date', { ascending: false })
-                .order('nolan_score', { ascending: false })
+                .order('wvs_score', { ascending: false })
                 .limit(50);
 
             if (error) throw error;
@@ -63,7 +63,7 @@ export default function Trends() {
             const formattedData = (data || []).map(d => ({
                 topic_id: d.topic_id,
                 topic_label: (d.topic_clusters as any)?.topic_label || 'Unknown',
-                wvs_score: d.nolan_score / 10, // Scale Nolan 0-100 to WVS 0-10 approx
+                wvs_score: d.wvs_score,
                 bid_momentum: d.velocity_score,
                 median_price: d.median_price,
                 date: d.date

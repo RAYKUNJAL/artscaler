@@ -16,7 +16,7 @@ export interface OpportunityToPublish {
     user_id: string;
     topic_id: string;
     topic_label: string;
-    nolan_score: number;
+    wvs_score: number;
     velocity_score: number;
     recommended_sizes: string[];
     recommended_mediums: string[];
@@ -73,7 +73,7 @@ export class PublisherAgent {
                     rank: i + 1,
                     topic_id: opp.topic_id,
                     topic_label: opp.topic_label,
-                    nolan_score: opp.nolan_score,
+                    wvs_score: opp.wvs_score,
                     velocity_score: opp.velocity_score,
                     recommended_sizes: opp.recommended_sizes,
                     recommended_mediums: opp.recommended_mediums,
@@ -136,7 +136,7 @@ export class PublisherAgent {
             .from('topic_scores_daily')
             .select(`
         topic_id,
-        nolan_score,
+        wvs_score,
         velocity_score,
         median_price,
         upper_quartile_price,
@@ -148,7 +148,7 @@ export class PublisherAgent {
       `)
             .eq('date', date)
             .gte('confidence', 0.6)
-            .order('nolan_score', { ascending: false })
+            .order('wvs_score', { ascending: false })
             .limit(topN * 2); // Get more than needed for filtering
 
         if (scoresError || !scores) {
@@ -177,7 +177,7 @@ export class PublisherAgent {
                 user_id: userId,
                 topic_id: score.topic_id,
                 topic_label: topicLabel,
-                nolan_score: score.nolan_score,
+                wvs_score: score.wvs_score,
                 velocity_score: score.velocity_score,
                 recommended_sizes: template.recommended_sizes,
                 recommended_mediums: template.recommended_mediums,
@@ -343,7 +343,7 @@ export class PublisherAgent {
             });
 
             // 2. Send email alert if there are hot opportunities (WVS > 4.5)
-            const hotOpps = opportunities?.filter(o => o.nolan_score >= 4.5 || o.wvs_score >= 4.5) || [];
+            const hotOpps = opportunities?.filter(o => o.wvs_score >= 4.5) || [];
 
             if (hotOpps.length > 0) {
                 // Fetch user email
@@ -361,7 +361,7 @@ export class PublisherAgent {
                         user.email,
                         hotOpps.slice(0, 3).map(o => ({
                             topic: o.topic_label,
-                            wvs: o.nolan_score || o.wvs_score,
+                            wvs: o.wvs_score,
                             evidence: `${process.env.NEXT_PUBLIC_APP_URL}/opportunities`
                         }))
                     );

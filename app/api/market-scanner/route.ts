@@ -1,13 +1,15 @@
 /**
- * Market Scanner API - eBay Pulse Scraper Integration
+ * Market Scanner API - eBay Finding API Integration
  * 
- * Handles scraping requests and stores results in Supabase.
- * Uses the new EbayPulseScraper for HTML-based scraping.
+ * Handles search requests and stores results in Supabase.
+ * Uses official eBay Finding API for Vercel serverless compatibility.
+ * 
+ * @updated 2025-12-22 - Switched from Playwright to Finding API
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
-import { EbayPulseScraper } from '@/services/scraper/ebay-pulse-scraper';
+import { ebayApiClient } from '@/services/ebay/ebay-api-client';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes timeout
@@ -47,8 +49,34 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to create scrape job' }, { status: 500 });
         }
 
-        // Scrape listings
-        const listings = await EbayPulseScraper.scrapeSoldListings(keyword, maxPages);
+        // Search listings using eBay Finding API (serverless compatible)
+        let listings: any[] = [];
+        let apiError: string | null = null;
+        const maxResults = 100;
+
+        try {
+            listings = await ebayApiClient.findCompletedItems(keyword, maxResults);
+        } catch (err: any) {
+            console.error('[Market Scanner] eBay API error:', err.message);
+            apiError = err.message;
+
+            // Update job with API error but don't fail completely
+            await supabase
+                .from('scrape_jobs')
+                .update({
+                    status: 'failed',
+                    completed_at: new Date().toISOString(),
+                    error_message: `eBay API Error: ${err.message}. Check EBAY_APP_ID and EBAY_ENVIRONMENT.`
+                })
+                .eq('id', job.id);
+
+            return NextResponse.json({
+                success: false,
+                error: 'eBay API error',
+                details: err.message,
+                hint: 'Ensure EBAY_APP_ID is set and EBAY_ENVIRONMENT=PRODUCTION'
+            }, { status: 500 });
+        }
 
         if (listings.length === 0) {
             await supabase
@@ -57,7 +85,7 @@ export async function POST(request: NextRequest) {
                     status: 'completed',
                     completed_at: new Date().toISOString(),
                     items_found: 0,
-                    error_message: 'No listings found'
+                    error_message: 'No listings found for this keyword'
                 })
                 .eq('id', job.id);
 
@@ -70,17 +98,18 @@ export async function POST(request: NextRequest) {
         }
 
         // Store listings in database
-        const listingsToInsert = listings.map(listing => ({
+        const listingsToInsert = listings.map((listing: any) => ({
             user_id: user.id,
             title: listing.title,
             sold_price: listing.soldPrice,
-            shipping_price: listing.shippingPrice,
-            currency: listing.currency,
-            is_auction: listing.isAuction,
-            bid_count: listing.bidCount,
-            sold_date: listing.soldDate,
+            shipping_price: listing.shippingPrice || 0,
+            currency: listing.currency || 'USD',
+            is_auction: listing.isAuction || false,
+            bid_count: listing.bidCount || 0,
+            sold_date: listing.soldDate?.toISOString?.() || listing.soldDate || new Date().toISOString(),
             item_url: listing.itemUrl,
-            search_keyword: keyword
+            search_keyword: keyword,
+            image_url: listing.imageUrl
         }));
 
         const { error: insertError } = await supabase
@@ -112,6 +141,16 @@ export async function POST(request: NextRequest) {
                 pages_scraped: maxPages
             })
             .eq('id', job.id);
+
+        // TRIGGER AI PIPELINE (WVS Analysis)
+        try {
+            const { getWVSAgent } = await import('@/services/ai/wvs-agent');
+            const wvsAgent = getWVSAgent();
+            await wvsAgent.processPipeline(user.id);
+            console.log(`[Market Scanner] ✅ WVS Analysis completed for user: ${user.id}`);
+        } catch (wvsError) {
+            console.error('[Market Scanner] ❌ WVS Pipeline failed:', wvsError);
+        }
 
         console.log(`[Market Scanner] Successfully scraped ${listings.length} listings for "${keyword}"`);
 

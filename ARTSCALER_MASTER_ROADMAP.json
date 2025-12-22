@@ -1,0 +1,1818 @@
+{
+    "artscaler_master_roadmap": {
+        "project_name": "ArtScaler - The Ultimate eBay Canvas Art Intelligence Platform",
+        "version": "6.0 - Google App Engine Production Edition",
+        "last_updated": "2025-12-22",
+        "goal": "Become the #1 market research and optimization tool for eBay canvas art sellers",
+        "architecture": {
+            "platform": "Google App Engine (Standard Environment)",
+            "runtime": "Node.js 20 with Next.js 14",
+            "database": {
+                "primary": "Supabase (PostgreSQL)",
+                "cache": "Upstash Redis",
+                "analytics": "BigQuery (optional for scale)"
+            },
+            "storage": "Supabase Storage / Cloud Storage",
+            "api_management": "Next.js API Routes + Edge Functions",
+            "monitoring": "Vercel Analytics + Sentry",
+            "cdn": "Vercel Edge Network / Cloud CDN",
+            "search": "Supabase Full-Text Search / Algolia",
+            "auth": "Supabase Auth",
+            "payments": "PayPal Subscriptions + Stripe"
+        },
+        "critical_fixes": {
+            "priority": "IMMEDIATE - BLOCKING LAUNCH",
+            "estimated_time": "1-2 weeks",
+            "total_estimated_hours": 164,
+            "fixes": [
+                {
+                    "id": "FIX-001",
+                    "name": "eBay API Integration Repair",
+                    "severity": "CRITICAL",
+                    "status": "BLOCKING",
+                    "description": "Market Scanner returns zero results. Must fix before any other work.",
+                    "root_cause_analysis": [
+                        "Sandbox API keys being used instead of production credentials",
+                        "OAuth 2.0 flow not properly implemented",
+                        "Rate limiting not respected (5,000 calls/day limit)",
+                        "Error handling missing for API failures",
+                        "Data parsing from JSON responses may be incorrect"
+                    ],
+                    "tasks": [
+                        "Replace sandbox API keys with production eBay Finding API credentials",
+                        "Implement proper authentication flow with OAuth 2.0",
+                        "Add comprehensive error handling for API failures",
+                        "Create retry logic with exponential backoff (1s, 2s, 4s, 8s, max 30s)",
+                        "Set up rate limiting to respect eBay's 5,000 calls/day limit",
+                        "Add API response logging and monitoring",
+                        "Test with 50+ different canvas art search queries",
+                        "Validate data parsing from eBay JSON responses",
+                        "Create fallback mechanisms for API downtime",
+                        "Document all API endpoints and their usage",
+                        "Implement background jobs for async eBay API calls",
+                        "Use cron jobs for periodic data refresh"
+                    ],
+                    "implementation_details": {
+                        "files_to_modify": [
+                            "services/ebay/ebay-api-client.ts",
+                            "app/api/ebay/search/route.ts",
+                            "app/api/market-scanner/route.ts",
+                            "lib/ebay/oauth.ts"
+                        ],
+                        "new_files": [
+                            "services/ebay/rate-limiter.ts",
+                            "services/ebay/retry-handler.ts",
+                            "lib/ebay/response-parser.ts"
+                        ],
+                        "env_variables": [
+                            "EBAY_APP_ID",
+                            "EBAY_CERT_ID",
+                            "EBAY_DEV_ID",
+                            "EBAY_OAUTH_TOKEN",
+                            "EBAY_ENVIRONMENT=production"
+                        ]
+                    },
+                    "acceptance_criteria": [
+                        "Market Scanner returns 10+ results for 'abstract canvas painting'",
+                        "Pricing History shows completed sales data",
+                        "No API errors in production logs for 24 hours",
+                        "Response time under 3 seconds for all queries",
+                        "95th percentile latency under 2 seconds",
+                        "Rate limit warnings logged when approaching 80% daily quota"
+                    ],
+                    "estimated_hours": 40
+                },
+                {
+                    "id": "FIX-002",
+                    "name": "Dashboard Data Population",
+                    "severity": "CRITICAL",
+                    "status": "BLOCKING",
+                    "description": "Dashboard shows all zeros - no data flowing through system",
+                    "root_cause_analysis": [
+                        "Dashboard metrics not connected to data sources",
+                        "Global Pulse calculation not implemented",
+                        "Background aggregation jobs missing",
+                        "No default state for new users with zero data"
+                    ],
+                    "tasks": [
+                        "Connect dashboard metrics to live eBay data streams",
+                        "Implement real-time Global Pulse calculation algorithm",
+                        "Create background jobs to aggregate market data every 15 minutes",
+                        "Add 'Getting Started' state for new users with zero data",
+                        "Show aggregate eBay market stats even before user scans",
+                        "Create demo data toggle for testing (admin only)",
+                        "Add data refresh timestamps to all metrics",
+                        "Implement caching layer for faster dashboard loads (5-min TTL)",
+                        "Use Server-Sent Events or polling for real-time updates",
+                        "Implement incremental data loading for large datasets"
+                    ],
+                    "implementation_details": {
+                        "files_to_modify": [
+                            "app/dashboard/page.tsx",
+                            "components/dashboard/GlobalPulse.tsx",
+                            "components/dashboard/MetricCards.tsx",
+                            "app/api/dashboard/stats/route.ts"
+                        ],
+                        "new_files": [
+                            "services/analytics/global-pulse-calculator.ts",
+                            "services/analytics/market-aggregator.ts",
+                            "app/api/cron/aggregate-stats/route.ts"
+                        ],
+                        "database_changes": [
+                            "Add market_snapshots table for historical data",
+                            "Add user_dashboard_cache table"
+                        ]
+                    },
+                    "metrics_to_populate": {
+                        "global_pulse": {
+                            "description": "Overall market health score (0-100)",
+                            "calculation": "(avg_wvs * 0.4) + (active_listings_growth * 0.3) + (sell_through_rate * 0.3)"
+                        },
+                        "tracked_volume": {
+                            "description": "Number of active listings being monitored",
+                            "source": "COUNT(scraped_listings WHERE status = 'active')"
+                        },
+                        "active_alerts": {
+                            "description": "High-demand opportunities detected",
+                            "source": "COUNT(opportunities WHERE wvs_score >= 7.0)"
+                        },
+                        "market_value": {
+                            "description": "Total value of tracked listings",
+                            "source": "SUM(scraped_listings.price WHERE status = 'active')"
+                        }
+                    },
+                    "acceptance_criteria": [
+                        "Global Pulse shows actual market sentiment score (not 0)",
+                        "Tracked Volume updates as user adds searches",
+                        "Active Alerts display when WVS >= 7.0 detected",
+                        "Market Value calculates based on user's tracked listings",
+                        "Dashboard loads in under 1.5 seconds",
+                        "New users see helpful onboarding prompts instead of zeros"
+                    ],
+                    "estimated_hours": 32
+                },
+                {
+                    "id": "FIX-003",
+                    "name": "Remove Test/Debug Elements",
+                    "severity": "HIGH",
+                    "status": "REQUIRED",
+                    "description": "Production site shows 'Test eBay Scraper' and sandbox references",
+                    "tasks": [
+                        "Remove 'Test eBay Scraper (API)' section from dashboard",
+                        "Hide all sandbox/test terminology from UI",
+                        "Move developer tools to /admin panel (role-protected)",
+                        "Clean up all console.log statements (replace with proper logging)",
+                        "Remove debug flags from production build",
+                        "Create separate staging environment for testing",
+                        "Implement feature flags for gradual rollout",
+                        "Set up environment-specific configurations"
+                    ],
+                    "implementation_details": {
+                        "files_to_modify": [
+                            "app/dashboard/page.tsx",
+                            "components/TestScraper.tsx (delete or move)",
+                            "app/test-scraper/ (remove entire directory)",
+                            "app/debug-session/ (remove or protect)"
+                        ],
+                        "new_files": [
+                            "app/admin/dev-tools/page.tsx",
+                            "middleware.ts (add admin route protection)",
+                            "lib/feature-flags.ts"
+                        ]
+                    },
+                    "acceptance_criteria": [
+                        "Zero 'test' or 'sandbox' references visible to regular users",
+                        "Professional production-ready interface",
+                        "No console.log output in production",
+                        "Admin panel only accessible to authenticated admins",
+                        "Developer tools accessible at /admin/dev-tools"
+                    ],
+                    "estimated_hours": 12
+                },
+                {
+                    "id": "FIX-004",
+                    "name": "eBay Fee Calculation Accuracy",
+                    "severity": "HIGH",
+                    "status": "REQUIRED",
+                    "description": "Verify profit calculator uses correct eBay fee structure",
+                    "current_ebay_fees_2024": {
+                        "final_value_fee": "13.25% on total amount up to $7,500",
+                        "per_order_fee": "$0.30",
+                        "above_7500": "2.35% on portion above $7,500",
+                        "store_discounts": {
+                            "starter": "0%",
+                            "basic": "4%",
+                            "premium": "10%",
+                            "anchor": "12%",
+                            "enterprise": "15%"
+                        },
+                        "promoted_listings": "2-20% of sale price (optional)",
+                        "international": "1.65% additional for international sales"
+                    },
+                    "tasks": [
+                        "Implement eBay's current fee structure (13.25% + $0.30)",
+                        "Add tiered fee calculation for sales over $7,500",
+                        "Account for category-specific fee variations",
+                        "Add eBay Store discount calculations (4-15% fee reduction)",
+                        "Include international buyer fees (1.65%)",
+                        "Add Promoted Listings fee calculator (2-20% ad rate)",
+                        "Update fees automatically when eBay changes rates",
+                        "Add fee calculator for different countries (UK, Canada, Australia)",
+                        "Store fee schedules in database for easy updates",
+                        "Create admin interface for fee schedule management"
+                    ],
+                    "implementation_details": {
+                        "files_to_modify": [
+                            "app/profit-calculator/page.tsx",
+                            "services/ebay/fee-calculator.ts",
+                            "lib/constants/ebay-fees.ts"
+                        ],
+                        "new_files": [
+                            "app/api/admin/fees/route.ts",
+                            "app/admin/fees/page.tsx"
+                        ],
+                        "database_changes": [
+                            "Add ebay_fee_schedules table with effective dates"
+                        ]
+                    },
+                    "acceptance_criteria": [
+                        "Fees match eBay's official calculator within $0.01",
+                        "Category-specific fees applied correctly",
+                        "Store discounts calculated accurately for all tiers",
+                        "Fee updates can be made via admin panel without code deployment",
+                        "Calculator shows breakdown: final value fee, per-order fee, store discount"
+                    ],
+                    "estimated_hours": 20
+                },
+                {
+                    "id": "FIX-005",
+                    "name": "Performance Optimization",
+                    "severity": "HIGH",
+                    "status": "REQUIRED",
+                    "description": "Optimize app for production performance",
+                    "tasks": [
+                        "Implement lazy loading for all images (Next.js Image component)",
+                        "Code-split JavaScript bundles by route (Next.js automatic)",
+                        "Minify and compress all CSS/JS assets",
+                        "Implement service worker for offline capability",
+                        "Add browser caching headers for static assets",
+                        "Optimize database queries (add indexes for common queries)",
+                        "Implement virtual scrolling for large lists (react-window)",
+                        "Use WebP images with fallbacks",
+                        "Implement resource preloading for critical assets",
+                        "Add performance monitoring with Web Vitals",
+                        "Enable Edge Runtime for API routes where possible",
+                        "Implement connection pooling for Supabase"
+                    ],
+                    "performance_targets": {
+                        "first_contentful_paint": "< 1.5s",
+                        "largest_contentful_paint": "< 2.5s",
+                        "time_to_interactive": "< 3.5s",
+                        "cumulative_layout_shift": "< 0.1",
+                        "first_input_delay": "< 100ms",
+                        "lighthouse_score": "> 90",
+                        "bundle_size": "< 200KB initial JS"
+                    },
+                    "implementation_details": {
+                        "files_to_modify": [
+                            "next.config.ts (add image optimization, compression)",
+                            "app/layout.tsx (add preload hints)",
+                            "components/* (add lazy loading)"
+                        ],
+                        "new_files": [
+                            "public/sw.js (service worker)",
+                            "lib/performance/web-vitals.ts"
+                        ],
+                        "database_indexes": [
+                            "CREATE INDEX idx_scraped_listings_keyword ON scraped_listings(keyword)",
+                            "CREATE INDEX idx_scraped_listings_created ON scraped_listings(created_at DESC)",
+                            "CREATE INDEX idx_opportunities_wvs ON opportunities(wvs_score DESC)"
+                        ]
+                    },
+                    "acceptance_criteria": [
+                        "Lighthouse performance score > 90",
+                        "Dashboard loads in < 1.5 seconds",
+                        "Market Scanner results appear in < 3 seconds",
+                        "No layout shift during page load",
+                        "Works offline with cached data"
+                    ],
+                    "estimated_hours": 40
+                }
+            ]
+        },
+        "phase_1_foundation": {
+            "name": "Core Functionality & User Experience",
+            "priority": "HIGH",
+            "timeline": "Weeks 3-6",
+            "goal": "Make the app usable and trustworthy",
+            "total_estimated_hours": 180,
+            "features": [
+                {
+                    "id": "P1-001",
+                    "category": "Onboarding",
+                    "name": "Interactive First-Run Experience",
+                    "description": "Guide new users through their first scan and teach them how to use the platform",
+                    "tasks": [
+                        "Create welcome modal with value proposition video",
+                        "Build 5-step interactive tutorial with progress tracking",
+                        "Add contextual tooltips for all metrics (WVS, ROI, etc.)",
+                        "Pre-populate example search: 'abstract acrylic painting 16x20'",
+                        "Show sample results before user runs first scan",
+                        "Add 'Help' button with video walkthrough on every page",
+                        "Create progress tracker: 'Complete your profile: 40%'",
+                        "Add celebration animation when first scan completes (confetti)",
+                        "Implement user onboarding checklist stored in database",
+                        "Track onboarding completion rates in analytics"
+                    ],
+                    "ui_components": [
+                        "Modal overlay with video embed",
+                        "Step indicator (1 of 5)",
+                        "Animated tooltips with arrow pointers (react-joyride)",
+                        "Confetti animation library (canvas-confetti)",
+                        "Progress bar with percentage",
+                        "Skip tutorial option with confirmation"
+                    ],
+                    "user_story": "As a new seller, I want to understand how to use the tool within 5 minutes so I can start getting insights immediately",
+                    "estimated_hours": 32,
+                    "dependencies": [
+                        "FIX-001",
+                        "FIX-002"
+                    ]
+                },
+                {
+                    "id": "P1-002",
+                    "category": "Documentation",
+                    "name": "Comprehensive Help System",
+                    "description": "In-app documentation and learning resources",
+                    "tasks": [
+                        "Create metric glossary (WVS, Global Pulse, Velocity, ROI)",
+                        "Write 'Getting Started' guide with screenshots",
+                        "Build FAQ section with 30+ common questions",
+                        "Add video tutorials for each major feature (5-8 videos)",
+                        "Create searchable help center",
+                        "Add live chat support widget (Crisp or Intercom)",
+                        "Build knowledge base articles for common issues",
+                        "Create eBay selling best practices library",
+                        "Implement in-app search for help articles",
+                        "Add contextual help buttons on every page"
+                    ],
+                    "ui_components": [
+                        "Searchable help widget (slide-out panel)",
+                        "Video player with chapters and timestamps",
+                        "Accordion-style FAQ",
+                        "Floating help button (bottom-right)",
+                        "Breadcrumb navigation for help articles",
+                        "Article rating system (helpful/not helpful)"
+                    ],
+                    "metric_glossary": {
+                        "WVS": {
+                            "full_name": "Watch Velocity Score",
+                            "description": "Measures demand intensity by analyzing watcher accumulation rate, bid activity, and listing age. Higher scores indicate stronger buyer interest.",
+                            "range": "0-10",
+                            "interpretation": {
+                                "0-3": "Low demand - consider different pricing or keywords",
+                                "4-6": "Moderate demand - good baseline",
+                                "7-8": "High demand - strong market interest",
+                                "9-10": "Hot opportunity - act quickly"
+                            }
+                        },
+                        "Global_Pulse": {
+                            "full_name": "Global Market Pulse",
+                            "description": "Overall health indicator for the canvas art market. Combines average WVS, listing growth rate, and sell-through rate.",
+                            "range": "0-100",
+                            "interpretation": {
+                                "0-30": "Bear market - buyer activity is low",
+                                "31-60": "Neutral market - normal trading conditions",
+                                "61-80": "Bull market - increased buyer activity",
+                                "81-100": "Hot market - exceptional demand"
+                            }
+                        },
+                        "ROI": {
+                            "full_name": "Return on Investment",
+                            "description": "Profit as a percentage of total costs including materials, eBay fees, and shipping.",
+                            "formula": "((Sale Price - Total Costs) / Total Costs) × 100"
+                        },
+                        "Sell_Through_Rate": {
+                            "full_name": "Sell-Through Rate",
+                            "description": "Percentage of listings that result in a sale within 30 days.",
+                            "formula": "(Sold Listings / Total Listings) × 100"
+                        }
+                    },
+                    "user_story": "As a seller, I want to understand what each metric means so I can make informed decisions",
+                    "estimated_hours": 48,
+                    "dependencies": []
+                },
+                {
+                    "id": "P1-003",
+                    "category": "Data Transparency",
+                    "name": "Show Data Sources & Freshness",
+                    "description": "Build trust by showing where data comes from and how recent it is",
+                    "tasks": [
+                        "Add 'Last updated: X minutes ago' to all data displays",
+                        "Show sample sizes: 'Based on 847 active listings'",
+                        "Add 'Powered by eBay Finding API' attribution (required by eBay)",
+                        "Create data quality indicators (high/medium/low confidence)",
+                        "Show data refresh schedule and next update time",
+                        "Add manual refresh button with rate limiting (once per 5 min)",
+                        "Display API status indicator (green=working, yellow=degraded, red=down)",
+                        "Create data methodology page explaining calculations",
+                        "Show data coverage: '94% of canvas art market'",
+                        "Add data source breakdown chart"
+                    ],
+                    "ui_components": [
+                        "Timestamp badges with relative time (5 minutes ago)",
+                        "Status indicator dots (green/yellow/red)",
+                        "Refresh button with loading spinner and cooldown timer",
+                        "Info tooltip explaining sample sizes",
+                        "Data quality badge (A/B/C rating or High/Medium/Low)",
+                        "System status banner for outages"
+                    ],
+                    "user_story": "As a seller, I want to know my data is current and reliable so I can trust the recommendations",
+                    "estimated_hours": 28,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P1-004",
+                    "category": "Error Handling",
+                    "name": "Comprehensive Error Management",
+                    "description": "Graceful handling of failures with helpful user messaging",
+                    "tasks": [
+                        "Create user-friendly error messages for all API failures",
+                        "Add retry buttons for failed operations",
+                        "Implement offline mode with cached data",
+                        "Show loading states for all async operations (skeleton loaders)",
+                        "Add error logging to monitoring service (Sentry)",
+                        "Create status page for system health (status.artscaler.com)",
+                        "Add email notifications for critical errors (admin)",
+                        "Build error recovery suggestions: 'Try searching a different keyword'",
+                        "Implement error boundaries in React components",
+                        "Add graceful degradation for non-critical features"
+                    ],
+                    "error_types": {
+                        "api_timeout": {
+                            "message": "The request is taking longer than expected. Please try again.",
+                            "action": "Retry button with exponential backoff"
+                        },
+                        "rate_limited": {
+                            "message": "You've made too many requests. Please wait a moment.",
+                            "action": "Show countdown timer until next allowed request"
+                        },
+                        "no_results": {
+                            "message": "No listings found for this search. Try broader keywords.",
+                            "action": "Show suggested alternative searches"
+                        },
+                        "auth_expired": {
+                            "message": "Your session has expired. Please log in again.",
+                            "action": "Redirect to login with return URL"
+                        },
+                        "network_error": {
+                            "message": "Unable to connect. Check your internet connection.",
+                            "action": "Show cached data if available, retry button"
+                        },
+                        "server_error": {
+                            "message": "Something went wrong on our end. We're looking into it.",
+                            "action": "Log error, show status page link, retry button"
+                        }
+                    },
+                    "user_story": "As a seller, when something goes wrong, I want clear guidance on what to do next",
+                    "estimated_hours": 24,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P1-005",
+                    "category": "Trust & Credibility",
+                    "name": "Build User Confidence",
+                    "description": "Add elements that establish credibility and trustworthiness",
+                    "tasks": [
+                        "Add seller testimonials with photos and results",
+                        "Display usage statistics: 'Join 2,847 canvas sellers'",
+                        "Create 'About Us' page with founder story",
+                        "Add comprehensive Privacy Policy",
+                        "Add Terms of Service",
+                        "Display SSL/security badges",
+                        "Show social proof: '1,249 scans run today'",
+                        "Add case studies of successful sellers",
+                        "Display trust seals and certifications",
+                        "Add eBay Developer Program badge"
+                    ],
+                    "pages_to_create": [
+                        "/about",
+                        "/legal/privacy",
+                        "/legal/terms",
+                        "/testimonials",
+                        "/case-studies"
+                    ],
+                    "user_story": "As a potential customer, I want to know this is a legitimate tool created by real people",
+                    "estimated_hours": 24,
+                    "dependencies": []
+                },
+                {
+                    "id": "P1-006",
+                    "category": "Feature Clarity",
+                    "name": "Clear Feature Labels & Pricing",
+                    "description": "Remove confusion about feature labels and tier requirements",
+                    "tasks": [
+                        "Create clear badge system: FREE, PRO, EMPIRE",
+                        "Remove ambiguous time-based labels (NEW, WEEKLY)",
+                        "Add feature lock icons for premium features",
+                        "Create pricing comparison page with feature matrix",
+                        "Add 'Upgrade to unlock' modals for locked features",
+                        "Show feature availability in sidebar navigation",
+                        "Create interactive feature tour",
+                        "Add tier badge to user profile header"
+                    ],
+                    "badge_definitions": {
+                        "FREE": "Available in Free Scout tier",
+                        "PRO": "Requires Pro Painter subscription ($29.99/mo)",
+                        "EMPIRE": "Requires Studio Empire subscription ($99.99/mo)",
+                        "AI": "Powered by AI (available in Pro+)",
+                        "BETA": "New feature in testing (feedback welcome)"
+                    },
+                    "user_story": "As a user, I want to clearly understand which features I can access with my current plan",
+                    "estimated_hours": 16,
+                    "dependencies": []
+                }
+            ]
+        },
+        "phase_2_canvas_art_specialization": {
+            "name": "Canvas Art-Specific Intelligence",
+            "priority": "HIGH",
+            "timeline": "Weeks 7-10",
+            "goal": "Differentiate from generic eBay tools with art-specific features",
+            "total_estimated_hours": 232,
+            "features": [
+                {
+                    "id": "P2-001",
+                    "category": "Size Analytics",
+                    "name": "Canvas Size Intelligence",
+                    "description": "Deep insights into which canvas sizes sell best and at what prices",
+                    "tasks": [
+                        "Create size demand tracker (16x20, 24x36, 30x40, etc.)",
+                        "Calculate average price by size",
+                        "Show profit per square inch metric",
+                        "Display size-specific velocity scores",
+                        "Create size comparison charts",
+                        "Add size recommendation engine",
+                        "Show seasonal size trends",
+                        "Calculate optimal size for different styles",
+                        "Add framed vs. unframed size analysis",
+                        "Create size profitability matrix"
+                    ],
+                    "size_categories": {
+                        "small": [
+                            "8x10",
+                            "11x14",
+                            "12x12",
+                            "12x16"
+                        ],
+                        "medium": [
+                            "16x20",
+                            "18x24",
+                            "20x20",
+                            "20x24"
+                        ],
+                        "large": [
+                            "24x30",
+                            "24x36",
+                            "30x30",
+                            "30x40"
+                        ],
+                        "xlarge": [
+                            "36x48",
+                            "40x60",
+                            "48x60",
+                            "48x72"
+                        ],
+                        "gallery": [
+                            "60x60",
+                            "60x72",
+                            "72x72",
+                            "custom"
+                        ]
+                    },
+                    "deliverables": [
+                        "Size Analytics Dashboard",
+                        "Size Recommendation Widget",
+                        "Profit Per Square Inch Calculator"
+                    ],
+                    "user_story": "As a canvas painter, I want to know which sizes sell best so I can create inventory that moves faster",
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P2-002",
+                    "category": "Color Analysis",
+                    "name": "Color Palette Trend Tracker",
+                    "description": "Analyze which color combinations are trending on eBay",
+                    "tasks": [
+                        "Implement AI color extraction from listing images",
+                        "Track popular color combinations",
+                        "Create color trend graphs over time",
+                        "Show seasonal color shifts (warm in fall, cool in summer)",
+                        "Build color palette generator for trending combinations",
+                        "Add 'Hot Colors This Week' widget to dashboard",
+                        "Create color-based opportunity finder",
+                        "Show which colors command premium prices",
+                        "Add complementary color suggestions",
+                        "Track monochromatic vs. multi-color trends"
+                    ],
+                    "color_categories": {
+                        "neutrals": [
+                            "black",
+                            "white",
+                            "gray",
+                            "beige",
+                            "cream"
+                        ],
+                        "earth_tones": [
+                            "brown",
+                            "tan",
+                            "olive",
+                            "terracotta",
+                            "rust"
+                        ],
+                        "cool_tones": [
+                            "blue",
+                            "teal",
+                            "navy",
+                            "turquoise",
+                            "aqua"
+                        ],
+                        "warm_tones": [
+                            "red",
+                            "orange",
+                            "gold",
+                            "burgundy",
+                            "coral"
+                        ],
+                        "accent_colors": [
+                            "pink",
+                            "purple",
+                            "green",
+                            "yellow",
+                            "lime"
+                        ]
+                    },
+                    "deliverables": [
+                        "Color Trend Dashboard",
+                        "AI-Powered Color Analyzer",
+                        "Trending Palette Generator",
+                        "Color Premium Price Indicator"
+                    ],
+                    "user_story": "As a painter, I want to know which colors are trending so I can create art that buyers want",
+                    "estimated_hours": 56,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P2-003",
+                    "category": "Style Intelligence",
+                    "name": "Advanced Style Analytics",
+                    "description": "Deep dive into art style performance and trends",
+                    "tasks": [
+                        "Expand style categories beyond current 5 to 20+",
+                        "Add sub-style tracking (geometric abstract, fluid abstract, etc.)",
+                        "Create style velocity charts",
+                        "Show style lifecycle (emerging, peak, declining)",
+                        "Build style comparison tool",
+                        "Add technique tracker (palette knife, pour, brush, etc.)",
+                        "Show subject matter trends (ocean, mountain, abstract, etc.)",
+                        "Create style mashup analyzer: 'Abstract + Geometric + Blue'",
+                        "Add style recommendation based on market gaps",
+                        "Track celebrity/influencer impact on styles"
+                    ],
+                    "style_taxonomy": {
+                        "abstract": [
+                            "geometric",
+                            "fluid",
+                            "minimalist",
+                            "expressionist",
+                            "color field"
+                        ],
+                        "landscape": [
+                            "seascape",
+                            "mountain",
+                            "urban",
+                            "rural",
+                            "fantasy"
+                        ],
+                        "figurative": [
+                            "portrait",
+                            "figure",
+                            "silhouette",
+                            "fashion"
+                        ],
+                        "botanical": [
+                            "floral",
+                            "tropical",
+                            "botanical",
+                            "garden"
+                        ],
+                        "contemporary": [
+                            "pop art",
+                            "street art",
+                            "graffiti",
+                            "mixed media"
+                        ],
+                        "traditional": [
+                            "impressionist",
+                            "realist",
+                            "classical",
+                            "folk"
+                        ]
+                    },
+                    "deliverables": [
+                        "Style Analytics Dashboard",
+                        "Style Trend Predictor",
+                        "Style Opportunity Finder",
+                        "Style Lifecycle Indicator"
+                    ],
+                    "user_story": "As a versatile artist, I want to know which styles to focus on to maximize sales",
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "FIX-001",
+                        "P2-001"
+                    ]
+                },
+                {
+                    "id": "P2-004",
+                    "category": "Shipping",
+                    "name": "Canvas Shipping Cost Calculator",
+                    "description": "Precise shipping calculations for different canvas sizes and types",
+                    "tasks": [
+                        "Build canvas dimension to shipping cost calculator",
+                        "Add USPS/FedEx/UPS rate comparisons",
+                        "Calculate rolled canvas vs. stretched shipping",
+                        "Add packaging cost estimator",
+                        "Show optimal shipping method by size",
+                        "Create flat rate box fit calculator",
+                        "Add international shipping costs (UK, Canada, Australia, EU)",
+                        "Calculate break-even shipping prices",
+                        "Show free shipping profitability analysis",
+                        "Add regional shipping cost variations",
+                        "Include insurance cost calculator"
+                    ],
+                    "shipping_options": {
+                        "usps": [
+                            "Priority Mail",
+                            "Ground Advantage",
+                            "Media Mail (for prints)"
+                        ],
+                        "fedex": [
+                            "Ground",
+                            "Home Delivery",
+                            "Express Saver"
+                        ],
+                        "ups": [
+                            "Ground",
+                            "3 Day Select",
+                            "2nd Day Air"
+                        ]
+                    },
+                    "packaging_costs": {
+                        "cardboard_corners": 0.50,
+                        "bubble_wrap": 0.25,
+                        "box_small": 2.00,
+                        "box_medium": 4.00,
+                        "box_large": 8.00,
+                        "tube_small": 3.00,
+                        "tube_large": 6.00
+                    },
+                    "deliverables": [
+                        "Shipping Calculator Widget",
+                        "Optimal Shipping Method Recommender",
+                        "Packaging Cost Database",
+                        "Free Shipping Profitability Analyzer"
+                    ],
+                    "user_story": "As a seller, I want accurate shipping costs so I can price competitively without losing money",
+                    "estimated_hours": 32,
+                    "dependencies": []
+                },
+                {
+                    "id": "P2-005",
+                    "category": "Materials",
+                    "name": "Art Supply Cost Database",
+                    "description": "Track material costs to calculate true profit margins",
+                    "tasks": [
+                        "Create database of canvas prices by size and quality",
+                        "Add paint cost tracking (acrylic, oil, watercolor)",
+                        "Track brush and tool costs",
+                        "Add material cost presets (budget/standard/premium)",
+                        "Create supply cost calculator",
+                        "Show cost per painting by complexity",
+                        "Add supply vendor price comparisons",
+                        "Track material cost trends over time",
+                        "Create bulk discount calculator",
+                        "Add custom material cost entries"
+                    ],
+                    "material_presets": {
+                        "budget": {
+                            "canvas_16x20": 5.00,
+                            "paint_set": 15.00,
+                            "brushes": 8.00,
+                            "misc": 2.00
+                        },
+                        "standard": {
+                            "canvas_16x20": 12.00,
+                            "paint_set": 35.00,
+                            "brushes": 20.00,
+                            "misc": 5.00
+                        },
+                        "premium": {
+                            "canvas_16x20": 25.00,
+                            "paint_set": 75.00,
+                            "brushes": 45.00,
+                            "misc": 10.00
+                        }
+                    },
+                    "deliverables": [
+                        "Material Cost Database",
+                        "Supply Cost Calculator",
+                        "Cost Preset Library",
+                        "Vendor Price Comparison Tool"
+                    ],
+                    "user_story": "As a seller, I want to track my material costs so I know my true profit margins",
+                    "estimated_hours": 24,
+                    "dependencies": []
+                },
+                {
+                    "id": "P2-006",
+                    "category": "Artist Branding",
+                    "name": "Artist Branding Suite",
+                    "description": "Tools to build and maintain artist brand identity",
+                    "tasks": [
+                        "AI Brand Generator (name, tagline, color palette)",
+                        "Smart COA (Certificate of Authenticity) Generator",
+                        "Thank You Card Generator with QR codes",
+                        "Artist Bio Writer with AI assistance",
+                        "Signature Style Analyzer",
+                        "Social Media Kit Generator",
+                        "Price Tag/Label Designer",
+                        "Business Card Template Generator",
+                        "Email Signature Creator",
+                        "Portfolio Website Linker"
+                    ],
+                    "deliverables": [
+                        "Brand Generator Dashboard",
+                        "COA PDF Generator",
+                        "Thank You Card Designer",
+                        "Artist Marketing Kit",
+                        "Social Media Templates"
+                    ],
+                    "user_story": "As an artist, I want professional branding materials to establish credibility and encourage repeat buyers",
+                    "estimated_hours": 48,
+                    "dependencies": []
+                }
+            ]
+        },
+        "phase_3_market_intelligence": {
+            "name": "Advanced Market Research Tools",
+            "priority": "MEDIUM-HIGH",
+            "timeline": "Weeks 11-14",
+            "goal": "Provide competitive intelligence and market positioning insights",
+            "total_estimated_hours": 200,
+            "features": [
+                {
+                    "id": "P3-001",
+                    "category": "Competition",
+                    "name": "Competitor Analysis Suite",
+                    "description": "Track and analyze competing sellers in the canvas art space",
+                    "tasks": [
+                        "Build seller watchlist feature (track up to 50 sellers)",
+                        "Show competitor listing volume over time",
+                        "Display average prices by competitor",
+                        "Track competitor sell-through rates",
+                        "Identify competitor strengths and weaknesses",
+                        "Show price gap opportunities",
+                        "Alert when competitors list new items",
+                        "Compare your performance vs. competitors",
+                        "Track competitor title keyword usage",
+                        "Analyze competitor shipping strategies"
+                    ],
+                    "metrics_tracked": {
+                        "listing_volume": "Number of active listings per seller",
+                        "avg_price": "Average listing price",
+                        "sell_through_rate": "Percentage of listings that sell",
+                        "avg_days_to_sell": "Average time to sale",
+                        "price_range": "Min/max prices",
+                        "popular_keywords": "Most used title keywords"
+                    },
+                    "deliverables": [
+                        "Competitor Dashboard",
+                        "Seller Watchlist Manager",
+                        "Competitive Gap Analyzer",
+                        "Price Positioning Tool"
+                    ],
+                    "user_story": "As a seller, I want to understand my competition so I can find gaps in the market",
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P3-002",
+                    "category": "Seasonality",
+                    "name": "Seasonal Trend Analyzer",
+                    "description": "Understand how demand changes throughout the year",
+                    "tasks": [
+                        "Build 12-month demand calendar",
+                        "Show holiday-specific trends (Christmas, Valentine's, etc.)",
+                        "Track back-to-school and college decor spikes",
+                        "Identify wedding season art demand",
+                        "Show summer vs. winter color preferences",
+                        "Create seasonal pricing recommendations",
+                        "Alert users before peak seasons",
+                        "Track year-over-year trend changes",
+                        "Build seasonal inventory planner",
+                        "Show regional seasonal variations"
+                    ],
+                    "seasonal_events": {
+                        "q1": [
+                            "Valentine's Day",
+                            "Presidents Day",
+                            "Spring Decor"
+                        ],
+                        "q2": [
+                            "Easter",
+                            "Mother's Day",
+                            "Wedding Season",
+                            "Graduation"
+                        ],
+                        "q3": [
+                            "Summer Decor",
+                            "Back to School",
+                            "College Move-In"
+                        ],
+                        "q4": [
+                            "Halloween",
+                            "Thanksgiving",
+                            "Black Friday",
+                            "Christmas",
+                            "New Year"
+                        ]
+                    },
+                    "deliverables": [
+                        "Seasonal Calendar View",
+                        "Trend Prediction Charts",
+                        "Inventory Planning Recommendations",
+                        "Peak Season Alerts"
+                    ],
+                    "user_story": "As a seller, I want to know when to create and list certain types of art",
+                    "estimated_hours": 40,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P3-003",
+                    "category": "Pricing",
+                    "name": "Dynamic Pricing Engine",
+                    "description": "AI-powered pricing recommendations based on real-time market data",
+                    "tasks": [
+                        "Build price recommendation algorithm",
+                        "Show price elasticity analysis",
+                        "Create competitive pricing suggestions",
+                        "Add auction vs. fixed price recommendations",
+                        "Show price history for similar items",
+                        "Implement automated repricing suggestions",
+                        "Add price testing framework (A/B pricing)",
+                        "Show margin optimization opportunities",
+                        "Create bundle pricing calculator",
+                        "Add psychological pricing suggestions ($47 vs $50)"
+                    ],
+                    "pricing_strategies": {
+                        "premium": "Price 20-30% above market average for unique pieces",
+                        "competitive": "Match market average for faster sales",
+                        "penetration": "Price 10-20% below market for new sellers",
+                        "auction": "Use auctions for rare or highly demanded items",
+                        "bundle": "Offer discounts for multiple purchases"
+                    },
+                    "deliverables": [
+                        "Pricing Engine Dashboard",
+                        "AI Price Recommendations",
+                        "Price History Charts",
+                        "Margin Optimizer"
+                    ],
+                    "user_story": "As a seller, I want data-driven pricing to maximize both sales and profit",
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "FIX-001",
+                        "FIX-004"
+                    ]
+                },
+                {
+                    "id": "P3-004",
+                    "category": "Keywords",
+                    "name": "Keyword Intelligence Center",
+                    "description": "Deep analysis of keywords that drive sales",
+                    "tasks": [
+                        "Build keyword demand tracker",
+                        "Show keyword trends over time",
+                        "Identify emerging keywords",
+                        "Calculate keyword competition scores",
+                        "Generate keyword cloud visualizations",
+                        "Create long-tail keyword suggestions",
+                        "Show keyword combinations that work together",
+                        "Track keyword performance by category",
+                        "Add negative keyword warnings",
+                        "Build keyword A/B testing tool"
+                    ],
+                    "keyword_categories": {
+                        "style": [
+                            "abstract",
+                            "modern",
+                            "contemporary",
+                            "vintage",
+                            "minimalist"
+                        ],
+                        "subject": [
+                            "landscape",
+                            "ocean",
+                            "mountain",
+                            "city",
+                            "flowers"
+                        ],
+                        "color": [
+                            "blue",
+                            "gold",
+                            "neutral",
+                            "colorful",
+                            "monochrome"
+                        ],
+                        "size": [
+                            "large",
+                            "small",
+                            "oversized",
+                            "mini",
+                            "custom"
+                        ],
+                        "medium": [
+                            "acrylic",
+                            "oil",
+                            "watercolor",
+                            "mixed media",
+                            "print"
+                        ],
+                        "attributes": [
+                            "original",
+                            "handmade",
+                            "signed",
+                            "framed",
+                            "stretched"
+                        ]
+                    },
+                    "deliverables": [
+                        "Keyword Explorer",
+                        "Trend Tracker",
+                        "Keyword Generator",
+                        "Competition Analyzer"
+                    ],
+                    "user_story": "As a seller, I want to use the best keywords to get my listings seen by buyers",
+                    "estimated_hours": 40,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P3-005",
+                    "category": "eBay SEO",
+                    "name": "eBay Cassini SEO Optimizer",
+                    "description": "Optimize listings for eBay's search algorithm",
+                    "tasks": [
+                        "Build listing SEO score calculator",
+                        "Add title optimization suggestions",
+                        "Check item specifics completeness",
+                        "Verify category placement",
+                        "Analyze photo quality and quantity",
+                        "Check pricing competitiveness",
+                        "Verify shipping options",
+                        "Add return policy recommendations",
+                        "Track listing performance over time",
+                        "A/B test title variations"
+                    ],
+                    "seo_factors": {
+                        "title": {
+                            "max_chars": 80,
+                            "tips": [
+                                "No special characters",
+                                "Include size",
+                                "Include color",
+                                "Include medium"
+                            ]
+                        },
+                        "item_specifics": {
+                            "required": [
+                                "Size",
+                                "Subject",
+                                "Style",
+                                "Medium",
+                                "Original/Reproduction"
+                            ],
+                            "recommended": [
+                                "Color",
+                                "Artist",
+                                "Year Created",
+                                "Frame Included"
+                            ]
+                        },
+                        "photos": {
+                            "min": 1,
+                            "recommended": 12,
+                            "requirements": [
+                                "Clear",
+                                "Well-lit",
+                                "Multiple angles",
+                                "Size reference"
+                            ]
+                        }
+                    },
+                    "deliverables": [
+                        "SEO Score Dashboard",
+                        "Title Optimizer",
+                        "Item Specifics Checker",
+                        "Listing Quality Report"
+                    ],
+                    "user_story": "As a seller, I want to optimize my listings so they rank higher in eBay search",
+                    "estimated_hours": 32,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                }
+            ]
+        },
+        "phase_4_monetization": {
+            "name": "Business & Revenue Features",
+            "priority": "MEDIUM",
+            "timeline": "Weeks 15-18",
+            "goal": "Enable sustainable business operations and revenue tracking",
+            "total_estimated_hours": 168,
+            "features": [
+                {
+                    "id": "P4-001",
+                    "category": "Payments",
+                    "name": "Complete Payment Integration",
+                    "description": "Full subscription management with multiple payment options",
+                    "tasks": [
+                        "Complete PayPal subscription integration",
+                        "Add Stripe as backup payment processor",
+                        "Implement 14-day free trial flow",
+                        "Create upgrade/downgrade flows",
+                        "Add cancellation flow with exit survey",
+                        "Implement dunning for failed payments",
+                        "Add invoice generation",
+                        "Create payment history page",
+                        "Implement refund processing",
+                        "Add coupon/discount code system"
+                    ],
+                    "subscription_tiers": {
+                        "free_scout": {
+                            "price_monthly": 0,
+                            "limits": {
+                                "daily_scans": 10,
+                                "keywords_tracked": 5,
+                                "historical_data_days": 7
+                            }
+                        },
+                        "pro_painter": {
+                            "price_monthly": 29.99,
+                            "price_yearly": 299,
+                            "limits": {
+                                "daily_scans": 500,
+                                "keywords_tracked": 150,
+                                "historical_data_days": 365
+                            }
+                        },
+                        "studio_empire": {
+                            "price_monthly": 99.99,
+                            "price_yearly": 999,
+                            "limits": {
+                                "daily_scans": 5000,
+                                "keywords_tracked": 1000,
+                                "historical_data_days": "unlimited"
+                            }
+                        }
+                    },
+                    "deliverables": [
+                        "Payment Processing Page",
+                        "Subscription Management Dashboard",
+                        "Invoice Generator",
+                        "Coupon System"
+                    ],
+                    "estimated_hours": 56,
+                    "dependencies": []
+                },
+                {
+                    "id": "P4-002",
+                    "category": "Usage Tracking",
+                    "name": "Tier Limit Enforcement",
+                    "description": "Track and enforce subscription tier limits",
+                    "tasks": [
+                        "Implement daily scan counter per user",
+                        "Add keyword limit enforcement",
+                        "Create usage dashboard for users",
+                        "Show limit warnings (80% used)",
+                        "Implement soft limits with upgrade prompts",
+                        "Add usage reset at midnight UTC",
+                        "Create admin usage overview",
+                        "Track feature usage analytics",
+                        "Add overage handling (optional)",
+                        "Create usage reports (weekly email)"
+                    ],
+                    "deliverables": [
+                        "Usage Dashboard Component",
+                        "Limit Enforcement Middleware",
+                        "Usage Analytics Dashboard",
+                        "Weekly Usage Reports"
+                    ],
+                    "estimated_hours": 32,
+                    "dependencies": [
+                        "P4-001"
+                    ]
+                },
+                {
+                    "id": "P4-003",
+                    "category": "Seller Tools",
+                    "name": "Inventory & Sales Tracker",
+                    "description": "Track listings, sales, and inventory",
+                    "tasks": [
+                        "Build listing inventory manager",
+                        "Track active vs. sold listings",
+                        "Calculate monthly sales totals",
+                        "Show profit/loss by listing",
+                        "Create inventory valuation",
+                        "Add low stock alerts",
+                        "Track best and worst performers",
+                        "Calculate inventory turnover rate",
+                        "Add inventory forecasting",
+                        "Create sales reports (weekly/monthly)"
+                    ],
+                    "deliverables": [
+                        "Inventory Dashboard",
+                        "Sales Tracker",
+                        "Profit/Loss Calculator",
+                        "Inventory Reports"
+                    ],
+                    "estimated_hours": 40,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                },
+                {
+                    "id": "P4-004",
+                    "category": "eBay Integration",
+                    "name": "Enhanced eBay Integration",
+                    "description": "Deep integration with eBay selling tools",
+                    "tasks": [
+                        "Implement eBay OAuth for account linking",
+                        "Import user's active listings",
+                        "Track user's completed sales",
+                        "Sync performance metrics from eBay",
+                        "Enable one-click listing creation",
+                        "Add bulk listing import",
+                        "Track seller level and ratings",
+                        "Monitor eBay messages",
+                        "Create draft listings before publishing",
+                        "Add listing revision history"
+                    ],
+                    "deliverables": [
+                        "eBay Account Connector",
+                        "Listing Importer",
+                        "Sales Sync Dashboard",
+                        "One-Click Listing Publisher"
+                    ],
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "FIX-001"
+                    ]
+                }
+            ]
+        },
+        "phase_5_scale": {
+            "name": "Scale & Growth Features",
+            "priority": "LOW",
+            "timeline": "Weeks 19-24",
+            "goal": "Features for power users and business growth",
+            "total_estimated_hours": 160,
+            "features": [
+                {
+                    "id": "P5-001",
+                    "category": "Automation",
+                    "name": "Smart Automation Suite",
+                    "description": "Automate repetitive tasks for power sellers",
+                    "tasks": [
+                        "Scheduled scans (daily/weekly)",
+                        "Automated alerts via email/Telegram",
+                        "Auto-repricing rules",
+                        "Bulk listing updates",
+                        "Scheduled report generation",
+                        "Automated competitor monitoring",
+                        "Template-based listing creation",
+                        "Workflow automation builder",
+                        "API access for Studio Empire tier",
+                        "Webhook integrations"
+                    ],
+                    "automation_types": {
+                        "schedule_scan": "Run market scans on a schedule",
+                        "price_alert": "Alert when price drops below threshold",
+                        "opportunity_alert": "Alert when WVS exceeds threshold",
+                        "competitor_alert": "Alert when competitor lists new item",
+                        "auto_reprice": "Adjust price based on market conditions"
+                    },
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "P4-002"
+                    ]
+                },
+                {
+                    "id": "P5-002",
+                    "category": "Reporting",
+                    "name": "Advanced Reporting & Export",
+                    "description": "Comprehensive reports and data export",
+                    "tasks": [
+                        "Build custom report builder",
+                        "Add CSV export for all data",
+                        "Create PDF report generator",
+                        "Add scheduled report delivery",
+                        "Build executive dashboard view",
+                        "Create comparison reports",
+                        "Add historical trend reports",
+                        "Build tax preparation reports",
+                        "Create white-label reports (Studio Empire)",
+                        "Add report sharing and collaboration"
+                    ],
+                    "report_types": [
+                        "Market Overview Report",
+                        "Sales Performance Report",
+                        "Competitor Analysis Report",
+                        "Pricing Optimization Report",
+                        "Inventory Status Report",
+                        "Year-End Tax Summary"
+                    ],
+                    "estimated_hours": 40,
+                    "dependencies": [
+                        "P4-003"
+                    ]
+                },
+                {
+                    "id": "P5-003",
+                    "category": "Team",
+                    "name": "Team & Collaboration",
+                    "description": "Multi-user features for teams and studios",
+                    "tasks": [
+                        "Add team member invitations",
+                        "Implement role-based permissions",
+                        "Create shared dashboards",
+                        "Add activity audit log",
+                        "Build team chat/comments",
+                        "Create workflow assignments",
+                        "Add multi-account management",
+                        "Build team performance tracking",
+                        "Create shared saved searches",
+                        "Add team billing management"
+                    ],
+                    "roles": {
+                        "owner": "Full access to all features and billing",
+                        "admin": "Full access except billing",
+                        "analyst": "View and analyze data, no editing",
+                        "artist": "View data related to their work only"
+                    },
+                    "estimated_hours": 48,
+                    "dependencies": [
+                        "P4-001"
+                    ]
+                },
+                {
+                    "id": "P5-004",
+                    "category": "API",
+                    "name": "Developer API Access",
+                    "description": "RESTful API for integrations and custom tools",
+                    "tasks": [
+                        "Design RESTful API endpoints",
+                        "Implement API key management",
+                        "Add rate limiting per tier",
+                        "Create API documentation (OpenAPI)",
+                        "Build webhook system",
+                        "Add OAuth for third-party apps",
+                        "Create SDKs (JavaScript, Python)",
+                        "Build API usage dashboard",
+                        "Add sandbox environment for testing",
+                        "Create integration marketplace"
+                    ],
+                    "api_endpoints": [
+                        "GET /api/v1/scans - List scans",
+                        "POST /api/v1/scans - Create new scan",
+                        "GET /api/v1/opportunities - List opportunities",
+                        "GET /api/v1/trends - Get market trends",
+                        "GET /api/v1/pricing - Get pricing recommendations"
+                    ],
+                    "estimated_hours": 40,
+                    "dependencies": [
+                        "P4-002"
+                    ]
+                }
+            ]
+        },
+        "phase_6_mobile_expansion": {
+            "name": "Mobile & Platform Expansion",
+            "priority": "LOW",
+            "timeline": "Weeks 25-30",
+            "goal": "Expand platform reach and accessibility",
+            "total_estimated_hours": 160,
+            "features": [
+                {
+                    "id": "P6-001",
+                    "category": "Mobile",
+                    "name": "Mobile App (PWA)",
+                    "description": "Progressive Web App for mobile users",
+                    "tasks": [
+                        "Optimize all pages for mobile",
+                        "Implement PWA with offline support",
+                        "Add push notifications",
+                        "Create mobile-specific navigation",
+                        "Optimize touch interactions",
+                        "Add camera integration for photos",
+                        "Create app install prompts",
+                        "Build mobile dashboard view",
+                        "Add biometric authentication",
+                        "Optimize for low bandwidth"
+                    ],
+                    "estimated_hours": 64,
+                    "dependencies": [
+                        "FIX-005"
+                    ]
+                },
+                {
+                    "id": "P6-002",
+                    "category": "Marketplace",
+                    "name": "Multi-Platform Support",
+                    "description": "Expand beyond eBay to other marketplaces",
+                    "tasks": [
+                        "Add Etsy integration",
+                        "Add Amazon Handmade support",
+                        "Add Shopify integration",
+                        "Create unified inventory view",
+                        "Cross-platform analytics",
+                        "Multi-platform listing tool",
+                        "Price sync across platforms",
+                        "Platform comparison reports",
+                        "Cross-platform opportunity alerts",
+                        "Platform fee comparisons"
+                    ],
+                    "platforms": [
+                        "eBay",
+                        "Etsy",
+                        "Amazon Handmade",
+                        "Shopify",
+                        "Facebook Marketplace"
+                    ],
+                    "estimated_hours": 80,
+                    "dependencies": [
+                        "FIX-001",
+                        "P4-004"
+                    ]
+                },
+                {
+                    "id": "P6-003",
+                    "category": "Community",
+                    "name": "Community & Learning Hub",
+                    "description": "Build a community of canvas art sellers",
+                    "tasks": [
+                        "Create seller forum/community",
+                        "Build success story showcase",
+                        "Add peer mentorship matching",
+                        "Create live webinar system",
+                        "Build course/tutorial library",
+                        "Add Q&A section",
+                        "Create seller badges/achievements",
+                        "Build referral program",
+                        "Add social sharing features",
+                        "Create seller directory (opt-in)"
+                    ],
+                    "estimated_hours": 48,
+                    "dependencies": []
+                }
+            ]
+        },
+        "ui_design_system": {
+            "name": "Premium UI/UX Design System",
+            "description": "Create a stunning, professional interface that wows users",
+            "design_principles": [
+                "Dark theme with glassmorphism effects",
+                "Smooth micro-animations for every interaction",
+                "Vibrant accent colors (electric blue, magenta, gold)",
+                "Clear visual hierarchy",
+                "Accessible (WCAG 2.1 AA compliant)",
+                "Mobile-first responsive design"
+            ],
+            "color_palette": {
+                "background": {
+                    "primary": "#0a0a0f",
+                    "secondary": "#12121a",
+                    "elevated": "#1a1a26"
+                },
+                "accent": {
+                    "primary": "#6366f1",
+                    "secondary": "#8b5cf6",
+                    "success": "#22c55e",
+                    "warning": "#f59e0b",
+                    "danger": "#ef4444"
+                },
+                "text": {
+                    "primary": "#ffffff",
+                    "secondary": "#a1a1aa",
+                    "muted": "#71717a"
+                },
+                "glass": {
+                    "background": "rgba(255, 255, 255, 0.05)",
+                    "border": "rgba(255, 255, 255, 0.1)"
+                }
+            },
+            "typography": {
+                "font_family": "Inter, system-ui, sans-serif",
+                "heading_sizes": {
+                    "h1": "2.5rem (40px)",
+                    "h2": "2rem (32px)",
+                    "h3": "1.5rem (24px)",
+                    "h4": "1.25rem (20px)"
+                },
+                "body_sizes": {
+                    "large": "1.125rem (18px)",
+                    "regular": "1rem (16px)",
+                    "small": "0.875rem (14px)",
+                    "tiny": "0.75rem (12px)"
+                }
+            },
+            "components": {
+                "cards": {
+                    "background": "glassmorphism with blur",
+                    "border": "1px solid rgba(255,255,255,0.1)",
+                    "border_radius": "16px",
+                    "shadow": "0 8px 32px rgba(0,0,0,0.4)"
+                },
+                "buttons": {
+                    "primary": "gradient background with hover glow",
+                    "secondary": "glass background with border",
+                    "ghost": "transparent with hover background"
+                },
+                "inputs": {
+                    "background": "rgba(255,255,255,0.05)",
+                    "border": "1px solid rgba(255,255,255,0.1)",
+                    "focus": "ring-2 ring-primary"
+                }
+            },
+            "animations": {
+                "page_transitions": "fade + slide (300ms)",
+                "hover_effects": "scale 1.02 + glow (150ms)",
+                "loading_states": "skeleton + shimmer",
+                "success": "confetti or checkmark animation",
+                "data_updates": "smooth number counters"
+            },
+            "spacing_scale": {
+                "xs": "4px",
+                "sm": "8px",
+                "md": "16px",
+                "lg": "24px",
+                "xl": "32px",
+                "2xl": "48px",
+                "3xl": "64px"
+            }
+        },
+        "data_architecture": {
+            "name": "Robust Data Architecture",
+            "database_schema": {
+                "users": {
+                    "description": "User accounts and profiles",
+                    "fields": [
+                        "id",
+                        "email",
+                        "name",
+                        "avatar_url",
+                        "tier",
+                        "created_at"
+                    ]
+                },
+                "subscriptions": {
+                    "description": "Payment subscriptions",
+                    "fields": [
+                        "id",
+                        "user_id",
+                        "tier",
+                        "status",
+                        "payment_gateway",
+                        "current_period_end"
+                    ]
+                },
+                "scraped_listings": {
+                    "description": "eBay listing data",
+                    "fields": [
+                        "id",
+                        "keyword",
+                        "title",
+                        "price",
+                        "bids",
+                        "watchers",
+                        "shipping",
+                        "seller",
+                        "sold_date",
+                        "image_url",
+                        "ebay_item_id",
+                        "created_at"
+                    ]
+                },
+                "opportunities": {
+                    "description": "High-value opportunities detected",
+                    "fields": [
+                        "id",
+                        "keyword",
+                        "wvs_score",
+                        "avg_price",
+                        "demand_level",
+                        "recommendation",
+                        "created_at"
+                    ]
+                },
+                "user_searches": {
+                    "description": "User's saved searches",
+                    "fields": [
+                        "id",
+                        "user_id",
+                        "keyword",
+                        "alert_enabled",
+                        "last_scanned",
+                        "created_at"
+                    ]
+                },
+                "market_snapshots": {
+                    "description": "Historical market data",
+                    "fields": [
+                        "id",
+                        "date",
+                        "global_pulse",
+                        "total_listings",
+                        "avg_price",
+                        "total_sales"
+                    ]
+                }
+            },
+            "caching_strategy": {
+                "redis_cache": {
+                    "dashboard_stats": "5 minutes TTL",
+                    "ebay_search_results": "15 minutes TTL",
+                    "user_session": "24 hours TTL",
+                    "rate_limit_counters": "1 minute TTL"
+                },
+                "browser_cache": {
+                    "static_assets": "1 year (versioned)",
+                    "api_responses": "5 minutes (stale-while-revalidate)"
+                }
+            },
+            "data_refresh_schedule": {
+                "market_aggregation": "Every 15 minutes",
+                "opportunity_detection": "Every 30 minutes",
+                "trend_calculation": "Every 6 hours",
+                "historical_snapshots": "Daily at midnight UTC"
+            }
+        },
+        "security": {
+            "name": "Security Best Practices",
+            "measures": [
+                "Row Level Security (RLS) on all database tables",
+                "API rate limiting (100 requests/minute)",
+                "CORS configuration for allowed origins",
+                "Environment variable encryption",
+                "SQL injection prevention (parameterized queries)",
+                "XSS prevention (sanitized inputs)",
+                "CSRF protection",
+                "HTTPS only (TLS 1.3)",
+                "Regular security audits",
+                "SOC 2 compliance roadmap"
+            ],
+            "authentication": {
+                "provider": "Supabase Auth",
+                "methods": [
+                    "Email/Password",
+                    "Google OAuth",
+                    "Magic Link"
+                ],
+                "session_duration": "7 days with refresh"
+            },
+            "authorization": {
+                "method": "Role-based access control (RBAC)",
+                "roles": [
+                    "user",
+                    "pro",
+                    "empire",
+                    "admin"
+                ]
+            }
+        },
+        "testing_strategy": {
+            "unit_tests": {
+                "framework": "Jest + React Testing Library",
+                "coverage_target": "80%",
+                "focus": [
+                    "Utility functions",
+                    "Calculations",
+                    "Hooks"
+                ]
+            },
+            "integration_tests": {
+                "framework": "Playwright",
+                "coverage": [
+                    "Auth flows",
+                    "Payment flows",
+                    "Core features"
+                ],
+                "environments": [
+                    "Development",
+                    "Staging"
+                ]
+            },
+            "e2e_tests": {
+                "framework": "Playwright",
+                "critical_paths": [
+                    "User signup and onboarding",
+                    "Market scan flow",
+                    "Subscription upgrade",
+                    "Profit calculation"
+                ]
+            }
+        },
+        "launch_checklist": {
+            "pre_launch": [
+                "All critical fixes completed (FIX-001 to FIX-005)",
+                "Production eBay API credentials configured",
+                "Payment processing tested with real cards",
+                "Legal pages complete (Privacy, Terms)",
+                "Error tracking configured (Sentry)",
+                "Analytics configured (Vercel Analytics, Google Analytics)",
+                "SSL certificate active",
+                "DNS configured for custom domain",
+                "Backup and recovery tested",
+                "Load testing completed (100 concurrent users)"
+            ],
+            "launch_day": [
+                "Enable production payment processing",
+                "Verify all monitoring dashboards",
+                "Staff support channels",
+                "Prepare incident response plan",
+                "Test critical user flows one more time",
+                "Announce launch on social media"
+            ],
+            "post_launch": [
+                "Monitor error rates and performance",
+                "Respond to user feedback",
+                "Track conversion rates",
+                "Iterate on onboarding based on data",
+                "Weekly feature releases"
+            ]
+        },
+        "success_metrics": {
+            "business": {
+                "monthly_recurring_revenue": "Target: $10,000 MRR by Month 6",
+                "paying_customers": "Target: 200 Pro/Empire subscribers",
+                "churn_rate": "Target: < 5% monthly",
+                "ltv_cac_ratio": "Target: > 3:1"
+            },
+            "product": {
+                "daily_active_users": "Target: 500 DAU",
+                "scans_per_day": "Target: 5,000 scans/day",
+                "user_retention_30_day": "Target: > 40%",
+                "nps_score": "Target: > 50"
+            },
+            "technical": {
+                "uptime": "Target: 99.9%",
+                "avg_response_time": "Target: < 200ms",
+                "error_rate": "Target: < 0.1%",
+                "lighthouse_score": "Target: > 90"
+            }
+        },
+        "timeline_summary": {
+            "weeks_1_2": "Critical Fixes (FIX-001 to FIX-005) - BLOCKING",
+            "weeks_3_6": "Phase 1: Foundation & User Experience",
+            "weeks_7_10": "Phase 2: Canvas Art Specialization",
+            "weeks_11_14": "Phase 3: Market Intelligence",
+            "weeks_15_18": "Phase 4: Monetization & Business",
+            "weeks_19_24": "Phase 5: Scale & Growth",
+            "weeks_25_30": "Phase 6: Mobile & Expansion"
+        },
+        "total_estimated_hours": {
+            "critical_fixes": 164,
+            "phase_1": 180,
+            "phase_2": 232,
+            "phase_3": 200,
+            "phase_4": 168,
+            "phase_5": 160,
+            "phase_6": 160,
+            "total": 1264,
+            "note": "Approximately 32 weeks at 40 hours/week"
+        }
+    }
+}

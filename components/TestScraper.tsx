@@ -177,15 +177,7 @@ export default function TestScraper() {
                     </div>
                 )}
 
-                <div className="bg-gray-800/50 rounded-lg p-4 text-xs md:text-sm text-gray-400 mt-6">
-                    <p className="font-semibold text-gray-300 mb-2">How it works:</p>
-                    <ul className="space-y-1 list-disc list-inside">
-                        <li>Uses the official eBay Finding API (sandbox keys).</li>
-                        <li>Creates a scrape job, then polls for results.</li>
-                        <li>Results are saved to your Supabase database.</li>
-                        <li>Displayed here in a responsive grid.</li>
-                    </ul>
-                </div>
+
             </div>
         </div>
     );

@@ -14,10 +14,13 @@ export default function ProfitCalculatorPage() {
         shippingCost: 18,
         itemCost: 50,
         otherCosts: 5,
+        promoAdRate: 2,
     });
 
-    const [result, setResult] = useState<ProfitCalculation | null>(null);
     const [isPro, setIsPro] = useState(false);
+    const [isInternational, setIsInternational] = useState(false);
+
+    const [result, setResult] = useState<ProfitCalculation | null>(null);
 
     useEffect(() => {
         // In a real app, check user subscription tier here
@@ -27,10 +30,12 @@ export default function ProfitCalculatorPage() {
             inputs.shippingCost,
             inputs.itemCost,
             inputs.otherCosts,
-            isPro
+            isPro,
+            isInternational,
+            inputs.promoAdRate
         );
         setResult(calc);
-    }, [inputs, isPro]);
+    }, [inputs, isPro, isInternational]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -130,7 +135,22 @@ export default function ProfitCalculatorPage() {
                                 </div>
                             </div>
 
-                            <div className="pt-4">
+                            <div className="space-y-2">
+                                <label htmlFor="promoAdRate" className="text-sm font-medium text-gray-400">Promoted Listing Ad Rate (%)</label>
+                                <div className="relative">
+                                    <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                                    <input
+                                        id="promoAdRate"
+                                        type="number"
+                                        name="promoAdRate"
+                                        value={inputs.promoAdRate}
+                                        onChange={handleInputChange}
+                                        className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 space-y-4">
                                 <label className="flex items-center gap-3 cursor-pointer group">
                                     <div
                                         onClick={() => setIsPro(!isPro)}
@@ -138,7 +158,17 @@ export default function ProfitCalculatorPage() {
                                     >
                                         <div className={`w-4 h-4 bg-white rounded-full transition-all ${isPro ? 'translate-x-6' : 'translate-x-0'}`} />
                                     </div>
-                                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">Apply Store/Pro Discount (10%)</span>
+                                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">eBay Store Subscriber (Discount)</span>
+                                </label>
+
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div
+                                        onClick={() => setIsInternational(!isInternational)}
+                                        className={`w-12 h-6 rounded-full p-1 transition-all ${isInternational ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                    >
+                                        <div className={`w-4 h-4 bg-white rounded-full transition-all ${isInternational ? 'translate-x-6' : 'translate-x-0'}`} />
+                                    </div>
+                                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">International Order (Extra Fee)</span>
                                 </label>
                             </div>
                         </div>
