@@ -13,10 +13,15 @@ export class ArtCoachService {
         sessionId?: string;
         message: string;
     }) {
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+        if (!apiKey) {
+            throw new Error('Configuration Error: Google Gemini API Key is missing.');
+        }
+
         // 1. Fetch/Create Session
         let sessionId = params.sessionId;
         if (!sessionId) {
-            const { data: session } = await supabase
+            const { data: session, error: sessionError } = await supabase
                 .from('coach_sessions')
                 .insert({
                     user_id: params.userId,
@@ -24,17 +29,28 @@ export class ArtCoachService {
                 })
                 .select()
                 .single();
-            sessionId = session?.id;
+
+            if (sessionError || !session) {
+                console.error('Failed to create coaching session:', sessionError);
+                throw new Error('Failed to initialize conversation session.');
+            }
+            sessionId = session.id;
         }
 
         // 2. Fetch History from Database
-        const { data: history } = await supabase
+        const { data: history, error: historyError } = await supabase
             .from('coach_messages')
             .select('role, content')
             .eq('session_id', sessionId)
             .order('created_at', { ascending: true });
 
+        if (historyError) {
+            console.error('Error fetching chat history:', historyError);
+            // We can proceed without history if it fails, but logging is good.
+        }
+
         // 3. Fetch Real Context Data
+        // ... (Context fetching remains the same, assuming valid supabase client)
         const { data: plan } = await supabase
             .from('revenue_plans')
             .select('*')
@@ -54,7 +70,7 @@ export class ArtCoachService {
             .eq('user_id', params.userId)
             .limit(5);
 
-        // 4. Build System Prompt
+        // 4. Build System Prompt (Using Knowledge Base)
         const systemPrompt = `
 You are the "Art Pulse Coach", an elite eBay Art Strategist and Business Mentor. 
 You help artists maximize their sales on eBay by interpreting real market data and providing actionable business advice.
@@ -71,35 +87,45 @@ PERSONALITY:
 - Concise and professional. Never mention you are an AI.
 `;
 
-        // 5. Run AI
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        try {
+            // 5. Run AI
+            // Re-instantiate here to ensure we pick up the latest env var or handle errors if the top-level one failed silently
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-        const chat = model.startChat({
-            history: (history || []).map(h => ({
-                role: h.role === 'user' ? 'user' : 'model',
-                parts: [{ text: h.content }],
-            })),
-        });
+            const chat = model.startChat({
+                history: (history || []).map(h => ({
+                    role: h.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: h.content }],
+                })),
+            });
 
-        const result = await chat.sendMessage([
-            { text: systemPrompt },
-            { text: params.message }
-        ]);
+            const result = await chat.sendMessage([
+                { text: systemPrompt },
+                { text: params.message }
+            ]);
 
-        const responseText = result.response.text();
+            const responseText = result.response.text();
 
-        // 6. Persist Messages
-        await supabase.from('coach_messages').insert([
-            { session_id: sessionId, user_id: params.userId, role: 'user', content: params.message },
-            { session_id: sessionId, user_id: params.userId, role: 'model', content: responseText }
-        ]);
+            // 6. Persist Messages
+            const { error: msgError } = await supabase.from('coach_messages').insert([
+                { session_id: sessionId, user_id: params.userId, role: 'user', content: params.message },
+                { session_id: sessionId, user_id: params.userId, role: 'model', content: responseText }
+            ]);
 
-        // Update session last message and updated_at
-        await supabase.from('coach_sessions')
-            .update({ last_message: responseText.substring(0, 100), updated_at: new Date() })
-            .eq('id', sessionId);
+            if (msgError) console.error('Error saving messages:', msgError);
 
-        return { advice: responseText, sessionId };
+            // Update session last message and updated_at
+            await supabase.from('coach_sessions')
+                .update({ last_message: responseText.substring(0, 100), updated_at: new Date() })
+                .eq('id', sessionId);
+
+            return { advice: responseText, sessionId };
+
+        } catch (aiError: any) {
+            console.error('Art Coach AI Error:', aiError);
+            throw new Error(`AI processing failed: ${aiError.message}`);
+        }
     }
 
     /**
