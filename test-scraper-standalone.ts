@@ -1,5 +1,5 @@
-
 import { ArtdemandScraper } from './services/scraper/artdemand-scraper';
+import { supabase } from './lib/supabase/client';
 
 async function test() {
     console.log('🚀 Starting Scraper Test...');
@@ -12,7 +12,7 @@ async function test() {
         const keyword = 'abstract painting';
         console.log(`🔍 Scraping for: ${keyword}`);
 
-        const listings = await scraper.scrapeActive(keyword, 1); // just 1 page
+        const listings = await scraper.scrapeActive(supabase, 'test-user-id', keyword, 1); // just 1 page
 
         console.log(`✅ Found ${listings.length} listings`);
         if (listings.length > 0) {

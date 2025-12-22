@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { supabase } from '@/lib/supabase/client';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export class SEOContentAgent {
     private genAI: GoogleGenerativeAI;
     private model: any;
 
     constructor() {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY!;
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY || '';
         this.genAI = new GoogleGenerativeAI(apiKey);
         this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     }
@@ -14,7 +14,7 @@ export class SEOContentAgent {
     /**
      * Automatically generate and publish an SEO-optimized blog post based on market trends
      */
-    async generateAutoPost(): Promise<{ success: boolean; slug?: string; error?: string }> {
+    async generateAutoPost(supabase: SupabaseClient): Promise<{ success: boolean; slug?: string; error?: string }> {
         try {
             console.log('🤖 SEO Agent: Analyzing global market benchmarks for content generation...');
 

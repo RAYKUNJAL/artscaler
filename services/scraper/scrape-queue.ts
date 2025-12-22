@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface ScrapeJob {
     id: string;
@@ -21,11 +21,11 @@ export interface CreateScrapeJobParams {
 /**
  * Create a new scrape job in the queue
  */
-export async function createScrapeJob(params: CreateScrapeJobParams): Promise<ScrapeJob | null> {
+export async function createScrapeJob(supabase: SupabaseClient, params: CreateScrapeJobParams): Promise<ScrapeJob | null> {
     const { userId, keyword } = params;
 
     // Check if user has reached their scrape limit
-    const canScrape = await checkScrapeLimit(userId);
+    const canScrape = await checkScrapeLimit(supabase, userId);
     if (!canScrape) {
         throw new Error('Monthly scrape limit reached. Please upgrade your plan.');
     }
@@ -51,8 +51,8 @@ export async function createScrapeJob(params: CreateScrapeJobParams): Promise<Sc
 /**
  * Get pending scrape jobs (for cron processor)
  */
-export async function getPendingScrapeJobs(limit: number = 10, client = supabase): Promise<ScrapeJob[]> {
-    const { data, error } = await client
+export async function getPendingScrapeJobs(supabase: SupabaseClient, limit: number = 10): Promise<ScrapeJob[]> {
+    const { data, error } = await supabase
         .from('scrape_jobs')
         .select('*')
         .eq('status', 'pending')
@@ -71,11 +71,11 @@ export async function getPendingScrapeJobs(limit: number = 10, client = supabase
  * Update scrape job status
  */
 export async function updateScrapeJob(
+    supabase: SupabaseClient,
     jobId: string,
-    updates: Partial<ScrapeJob>,
-    client = supabase
+    updates: Partial<ScrapeJob>
 ): Promise<void> {
-    const { error } = await client
+    const { error } = await supabase
         .from('scrape_jobs')
         .update(updates)
         .eq('id', jobId);
@@ -88,8 +88,8 @@ export async function updateScrapeJob(
 /**
  * Get user's scrape jobs
  */
-export async function getUserScrapeJobs(userId: string, limit: number = 20, client = supabase): Promise<ScrapeJob[]> {
-    const { data, error } = await client
+export async function getUserScrapeJobs(supabase: SupabaseClient, userId: string, limit: number = 20): Promise<ScrapeJob[]> {
+    const { data, error } = await supabase
         .from('scrape_jobs')
         .select('*')
         .eq('user_id', userId)
@@ -107,13 +107,13 @@ export async function getUserScrapeJobs(userId: string, limit: number = 20, clie
 /**
  * Check if user can scrape (within monthly limits)
  */
-async function checkScrapeLimit(userId: string, client = supabase): Promise<boolean> {
+async function checkScrapeLimit(supabase: SupabaseClient, userId: string): Promise<boolean> {
     // Get current month's usage
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const { data: usage, error } = await client
+    const { data: usage, error } = await supabase
         .from('user_usage_tracking')
         .select('scrapes_used, scrapes_limit')
         .eq('user_id', userId)
@@ -131,8 +131,8 @@ async function checkScrapeLimit(userId: string, client = supabase): Promise<bool
 /**
  * Increment user's scrape usage
  */
-export async function incrementScrapeUsage(userId: string, client = supabase): Promise<void> {
-    const { error } = await client.rpc('increment_usage', {
+export async function incrementScrapeUsage(supabase: SupabaseClient, userId: string): Promise<void> {
+    const { error } = await supabase.rpc('increment_usage', {
         limit_type: 'scrapes',
         increment: 1,
     });
@@ -145,8 +145,8 @@ export async function incrementScrapeUsage(userId: string, client = supabase): P
 /**
  * Get scrape job by ID
  */
-export async function getScrapeJobById(jobId: string, client = supabase): Promise<ScrapeJob | null> {
-    const { data, error } = await client
+export async function getScrapeJobById(jobId: string, supabase: SupabaseClient): Promise<ScrapeJob | null> {
+    const { data, error } = await supabase
         .from('scrape_jobs')
         .select('*')
         .eq('id', jobId)

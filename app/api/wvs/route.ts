@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { getWVSAgent } from '@/services/ai/wvs-agent';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
         const supabase = await createServerClient();
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === 'calculate-all') {
-            const report = await wvsAgent.processPipeline(user.id);
+            const report = await wvsAgent.processPipeline(supabase, user.id);
             return NextResponse.json({
                 success: true,
                 count: report.totalListingsAnalyzed,
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === 'generate-report') {
-            const report = await wvsAgent.processPipeline(user.id);
+            const report = await wvsAgent.processPipeline(supabase, user.id);
             return NextResponse.json({ success: true, report });
         }
 

@@ -1,26 +1,29 @@
-/**
- * Daily Pipeline Cron Job
- * 
- * Runs at 3 AM ET daily to process all active users' keywords
- * and generate fresh opportunities.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getPulseOrchestrator } from '@/services/ai/orchestrator';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
-    // Verify cron secret to prevent unauthorized access
+    // 1. Guard against build-time execution
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return NextResponse.json({ error: 'Environment variables not configured' }, { status: 500 });
+    }
+
+    // 2. Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
         // Create admin Supabase client
         const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
         // Get all active users with saved keywords

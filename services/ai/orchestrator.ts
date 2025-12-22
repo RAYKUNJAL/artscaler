@@ -64,7 +64,7 @@ export class PulseOrchestrator {
 
             // 5. Pulse Scoring (New WVS Logic)
             const wvsAgent = getWVSAgent();
-            const report = await wvsAgent.processPipeline(userId, runId);
+            const report = await wvsAgent.processPipeline(supabase, userId, runId);
             console.log(`✓ Generated Pulse Velocity Report: ${report.totalListingsAnalyzed} analyzed`);
 
             // 6. Visual Analysis (New Visual Gallery Logic)

@@ -45,7 +45,11 @@ export default function StyleGalleryPage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <button className="p-2.5 bg-gray-900 border border-gray-800 rounded-xl text-gray-400 hover:text-white transition-all">
+                        <button
+                            className="p-2.5 bg-gray-900 border border-gray-800 rounded-xl text-gray-400 hover:text-white transition-all"
+                            aria-label="Filter Styles"
+                            title="Filter Styles"
+                        >
                             <SlidersHorizontal className="h-5 w-5" />
                         </button>
                     </div>
@@ -58,8 +62,8 @@ export default function StyleGalleryPage() {
                             key={style.name}
                             onClick={() => setSelectedStyle(style.value)}
                             className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap border ${selectedStyle === style.value
-                                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
-                                    : 'bg-gray-900 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
+                                ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                : 'bg-gray-900 border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-300'
                                 }`}
                         >
                             {style.name}

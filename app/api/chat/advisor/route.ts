@@ -3,6 +3,8 @@ import { createServerClient } from '@/lib/supabase/server';
 import { getArtAdvisorAgent } from '@/services/ai/advisor-agent';
 import { PricingService } from '@/services/pricing-service';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createServerClient();

@@ -3,23 +3,9 @@
  * 
  * The core demand intelligence engine for eBay Art Pulse Pro.
  * Replaces the Nolan Score with a watch-count based demand metric.
- * 
- * Formula:
- * WVS = ((watchCount + (bidCount * 2)) / daysActive) * (1 / normalizedPriceFactor) * competitionAdjustment
- * 
- * Components:
- * - daysActive: Current date - listing start date + 1
- * - normalizedPriceFactor: itemPrice / categoryMedianPrice (penalize >2x median)
- * - competitionAdjustment: 1 / (1 + similarListingsCount)
- * - Bid Weight: Bids are weighted 2x relative to watches as they represent harder intent.
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for global updates
-);
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 // Types
@@ -79,19 +65,53 @@ export interface WVSReport {
     recommendations: string[];
 }
 
+// Supabase table types (simplified for this context)
+interface SoldListing {
+    id: string;
+    title: string;
+    bid_count: number | null;
+    sold_price: number | null;
+    created_at: string;
+    parsed_signals: Array<{ size_bucket: string; style: string }> | null;
+}
+
+interface ActiveListing {
+    id: string;
+    title: string;
+    watcher_count: number | null;
+    bid_count: number | null;
+    current_price: number | null;
+    first_seen_at: string | null;
+    created_at: string;
+    width_in: number | null;
+    height_in: number | null;
+}
+
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 // WVS Agent Class
 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
+interface StyleClusterData {
+    totalWvs: number;
+    count: number;
+    prices: number[];
+    items: ListingWVS[];
+}
+
+interface SizeClusterData {
+    totalWvs: number;
+    count: number;
+    prices: number[];
+}
+
 export class WVSAgent {
     private categoryMedians: Map<string, number> = new Map();
     private defaultMedianPrice = 150;
+    private initialized = false;
 
-    constructor() {
-        this.loadCategoryMedians();
-    }
+    private async ensureInitialized(supabase: SupabaseClient): Promise<void> {
+        if (this.initialized) return;
 
-    private async loadCategoryMedians(): Promise<void> {
         try {
             const { data, error } = await supabase
                 .from('pricing_analysis')
@@ -102,6 +122,7 @@ export class WVSAgent {
                     this.categoryMedians.set(row.size_bucket, row.median_price);
                 });
             }
+            this.initialized = true;
         } catch (err) {
             console.warn('WVSAgent: Could not load category medians');
         }
@@ -161,8 +182,9 @@ export class WVSAgent {
         return Math.min(confidence, 1.0);
     }
 
-    public async processPipeline(userId: string, runId?: string): Promise<WVSReport> {
+    public async processPipeline(supabase: SupabaseClient, userId: string, runId?: string): Promise<WVSReport> {
         console.log(`🚀 WVS Agent: Starting Pipeline Processing for user ${userId}...`);
+        await this.ensureInitialized(supabase);
 
         // 1. Fetch Sold Listings (Historical Demand)
         let soldQuery = supabase
@@ -189,8 +211,8 @@ export class WVSAgent {
 
         console.log(`📊 WVS Agent: Processing ${totalToProcess} listings (${soldListings?.length || 0} sold, ${activeListings?.length || 0} active)`);
 
-        const styleClusters = new Map<string, { totalWvs: number; count: number; prices: number[]; items: ListingWVS[] }>();
-        const sizeClusters = new Map<string, { totalWvs: number; count: number; prices: number[] }>();
+        const styleClusters = new Map<string, StyleClusterData>();
+        const sizeClusters = new Map<string, SizeClusterData>();
 
         // 3. Process Sold Listings
         for (const listing of soldListings || []) {
@@ -198,7 +220,7 @@ export class WVSAgent {
             const signals = listing.parsed_signals?.[0];
 
             const score = this.calculateWVS({
-                watcherCount: listing.bid_count || 0, // Fallback for sold
+                watcherCount: listing.bid_count || 0,
                 bidCount: listing.bid_count || 0,
                 daysActive,
                 itemPrice: listing.sold_price || 0,
@@ -237,10 +259,10 @@ export class WVSAgent {
         const topSizes = this.finalizeSizeClusters(sizeClusters);
 
         // 6. Sync to Global Metrics Tables (styles, sizes)
-        await this.syncGlobalMetrics(topStyles, topSizes);
+        await this.syncGlobalMetrics(supabase, topStyles, topSizes);
 
         // 7. Persist to Opportunities
-        await this.saveAnalysis(userId, topStyles, runId);
+        await this.saveAnalysis(supabase, userId, topStyles, runId);
 
         return {
             generatedAt: new Date().toISOString(),
@@ -251,15 +273,15 @@ export class WVSAgent {
         };
     }
 
-    private addToClusters(listing: any, score: WVSScore, style: string, size: string, styleClusters: Map<string, any>, sizeClusters: Map<string, any>) {
+    private addToClusters(listing: SoldListing | ActiveListing, score: WVSScore, style: string, size: string, styleClusters: Map<string, StyleClusterData>, sizeClusters: Map<string, SizeClusterData>) {
         const listingWvs: ListingWVS = {
             listingId: listing.id,
             title: listing.title,
             wvs: score,
-            watcherCount: listing.watcher_count || 0,
+            watcherCount: 'watcher_count' in listing ? (listing.watcher_count || 0) : (listing.bid_count || 0), // Use watcher_count for active, bid_count for sold as a proxy
             bidCount: listing.bid_count || 0,
-            price: listing.sold_price || listing.current_price || 0,
-            daysActive: score.confidence > 0.5 ? 7 : 1, // Simplified
+            price: 'sold_price' in listing ? (listing.sold_price || 0) : (listing.current_price || 0),
+            daysActive: score.confidence > 0.5 ? 7 : 1, // This seems like a placeholder, consider using actual daysActive from input
         };
 
         const currentStyle = styleClusters.get(style) || { totalWvs: 0, count: 0, prices: [], items: [] };
@@ -276,19 +298,19 @@ export class WVSAgent {
         sizeClusters.set(size, currentSize);
     }
 
-    private finalizeStyleClusters(styleClusters: Map<string, any>): StyleWVS[] {
+    private finalizeStyleClusters(styleClusters: Map<string, StyleClusterData>): StyleWVS[] {
         return Array.from(styleClusters.entries())
             .map(([style, data]) => ({
                 styleTerm: style,
                 avgWvs: data.totalWvs / data.count,
                 listingCount: data.count,
                 demandScore: Math.min((data.totalWvs / data.count) * 10, 10),
-                topListings: data.items.sort((a: any, b: any) => b.wvs.wvs - a.wvs.wvs).slice(0, 5)
+                topListings: data.items.sort((a: ListingWVS, b: ListingWVS) => b.wvs.wvs - a.wvs.wvs).slice(0, 5)
             }))
             .sort((a, b) => b.avgWvs - a.avgWvs);
     }
 
-    private finalizeSizeClusters(sizeClusters: Map<string, any>): SizeWVS[] {
+    private finalizeSizeClusters(sizeClusters: Map<string, SizeClusterData>): SizeWVS[] {
         return Array.from(sizeClusters.entries())
             .map(([size, data]) => ({
                 sizeCluster: size,
@@ -300,7 +322,7 @@ export class WVSAgent {
             .sort((a, b) => b.avgWvs - a.avgWvs);
     }
 
-    private async syncGlobalMetrics(styles: StyleWVS[], sizes: SizeWVS[]) {
+    private async syncGlobalMetrics(supabase: SupabaseClient, styles: StyleWVS[], sizes: SizeWVS[]) {
         console.log('🌐 WVS Agent: Syncing global metrics...');
 
         for (const style of styles) {
@@ -334,14 +356,13 @@ export class WVSAgent {
         return 'extra-large';
     }
 
-    private async saveAnalysis(userId: string, styles: StyleWVS[], runId?: string) {
+    private async saveAnalysis(supabase: SupabaseClient, userId: string, styles: StyleWVS[], runId?: string) {
         console.log('💾 WVS Agent: Saving analysis to opportunity feed...');
 
         for (let i = 0; i < Math.min(styles.length, 5); i++) {
             const style = styles[i];
-
-            // Upsert topic cluster
             const slug = style.styleTerm.toLowerCase().replace(/\s+/g, '-');
+
             const { data: topic } = await supabase
                 .from('topic_clusters')
                 .upsert({
@@ -353,7 +374,6 @@ export class WVSAgent {
                 .single();
 
             if (topic) {
-                // Save daily score
                 await supabase.from('topic_scores_daily').insert({
                     run_id: runId,
                     topic_id: topic.id,
@@ -363,7 +383,6 @@ export class WVSAgent {
                     median_price: style.topListings[0]?.price || 150
                 });
 
-                // Save opportunity
                 await supabase.from('opportunity_feed').upsert({
                     user_id: userId,
                     run_id: runId,

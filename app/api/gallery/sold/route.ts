@@ -5,6 +5,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+        // Guard against build-time execution if somehow triggered
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+            return NextResponse.json({ success: true, listings: [] });
+        }
+
         const supabase = await createServerClient();
         const { data: { user } } = await supabase.auth.getUser();
 

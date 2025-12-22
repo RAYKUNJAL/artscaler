@@ -3,6 +3,8 @@ import { createServerClient } from '@/lib/supabase/server';
 import { getPulseOrchestrator } from '@/services/ai/orchestrator';
 import { AutomationOrchestrator } from '@/services/scraper/automation-orchestrator';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createServerClient();

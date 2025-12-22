@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { ExternalLink, Maximize2, Info, TrendingUp, Calendar, DollarSign } from 'lucide-react';
+import { ExternalLink, Maximize2, TrendingUp, Calendar, DollarSign } from 'lucide-react';
 
 interface ArtCardProps {
     listing: {
@@ -20,7 +20,7 @@ interface ArtCardProps {
             mood: string;
         };
     };
-    onQuickView: (listing: any) => void;
+    onQuickView: (listing: ArtCardProps['listing']) => void;
 }
 
 export default function ArtCard({ listing, onQuickView }: ArtCardProps) {
@@ -51,11 +51,13 @@ export default function ArtCard({ listing, onQuickView }: ArtCardProps) {
 
             {/* Image Container */}
             <div className="relative aspect-auto min-h-[200px] cursor-pointer" onClick={() => onQuickView(listing)}>
-                <img
+                <Image
                     src={listing.image_url}
                     alt={listing.title}
+                    width={400}
+                    height={300}
+                    unoptimized
                     className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700"
-                    loading="lazy"
                 />
 
                 {/* Information Overlay on Hover */}
@@ -83,11 +85,10 @@ export default function ArtCard({ listing, onQuickView }: ArtCardProps) {
                         {colors.map((color, i) => (
                             <div
                                 key={i}
-                                className="w-4 h-4 rounded-full border border-white/20 shadow-sm"
+                                className="w-4 h-4 rounded-full border border-white/20 shadow-sm dynamic-swatch"
+                                // eslint-disable-next-line react/no-unknown-property
                                 style={{ '--swatch-color': color } as React.CSSProperties}
-                            >
-                                <div className="w-full h-full rounded-full bg-[var(--swatch-color)]" />
-                            </div>
+                            />
                         ))}
                     </div>
                 </div>

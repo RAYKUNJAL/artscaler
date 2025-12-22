@@ -3,9 +3,15 @@ import { createServerClient } from '@/lib/supabase/server';
 import { ebayApiClient } from '@/services/ebay/ebay-api-client';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export const maxDuration = 300; // 5 minutes
 
 export async function POST(request: NextRequest) {
+    // Guard against build-time execution if somehow triggered
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        return NextResponse.json({ error: 'Environment variables not configured' }, { status: 500 });
+    }
+
     try {
         const supabase = await createServerClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -92,7 +98,13 @@ export async function POST(request: NextRequest) {
 
 // Background eBay API / Scraper function
 async function runEbayApiScraper(jobId: string, userId: string, keyword: string, mode: 'sold' | 'active' = 'active') {
-    const supabase = await createServerClient();
+    // In background workers, we might need a different client if we want to bypass cookies
+    // But since this is triggered by a request, we use the service role key for reliability
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     try {
         console.log(`🤖 Starting API scrape (mode: ${mode}) for job ${jobId}...`);
@@ -235,7 +247,7 @@ async function runEbayApiScraper(jobId: string, userId: string, keyword: string,
         try {
             const { getWVSAgent } = await import('@/services/ai/wvs-agent');
             const wvsAgent = getWVSAgent();
-            await wvsAgent.processPipeline(userId);
+            await wvsAgent.processPipeline(supabase, userId);
             console.log(`✅ WVS Analysis completed for user: ${userId}`);
         } catch (wvsError) {
             console.error('❌ WVS Pipeline failed:', wvsError);

@@ -3,14 +3,10 @@
  * 
  * Recommends whether to list art as Auction or Buy It Now (BIN)
  * based on demand signals, competition, and historical data.
- * 
- * Rules:
- * - Auction: High WVS, low competition, unique pieces
- * - BIN: Clear price bands, reproducible styles, steady demand
  */
 
-import { supabase } from '@/lib/supabase/client';
-import { getWVSAgent, WVSScore } from './wvs-agent';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { getWVSAgent } from './wvs-agent';
 
 // ============================================
 // Types
@@ -53,12 +49,10 @@ export interface StrategyInput {
 // ============================================
 
 export class ListingStrategyAdvisor {
-    private wvsAgent = getWVSAgent();
-
     /**
      * Get listing strategy recommendation
      */
-    async getStrategy(input: StrategyInput): Promise<ListingStrategy> {
+    async getStrategy(supabase: SupabaseClient, input: StrategyInput): Promise<ListingStrategy> {
         const reasoning: string[] = [];
         let auctionScore = 0;
         let binScore = 0;
@@ -67,7 +61,7 @@ export class ListingStrategyAdvisor {
         // 1. Check WVS for the style
         // ----------------------------------------
         if (input.style) {
-            const styleWvs = await this.getStyleWVS(input.style);
+            const styleWvs = await this.getStyleWVS(supabase, input.style);
             if (styleWvs > 5) {
                 auctionScore += 30;
                 reasoning.push(`"${input.style}" style has high demand (WVS ${styleWvs.toFixed(2)}) - auction could drive bidding war`);
@@ -83,7 +77,7 @@ export class ListingStrategyAdvisor {
         // ----------------------------------------
         // 2. Check competition level
         // ----------------------------------------
-        const competition = await this.getCompetition(input.style, input.size);
+        const competition = await this.getCompetition(supabase, input.style, input.size);
         if (competition.level === 'low') {
             auctionScore += 25;
             reasoning.push(`Low competition (${competition.count} similar listings) - auction can capture premium`);
@@ -111,7 +105,7 @@ export class ListingStrategyAdvisor {
         // ----------------------------------------
         // 4. Price analysis
         // ----------------------------------------
-        const priceData = await this.getPriceBands(input.style, input.size);
+        const priceData = await this.getPriceBands(supabase, input.style, input.size);
 
         if (input.estimatedPrice) {
             if (input.estimatedPrice > priceData.high) {
@@ -165,7 +159,7 @@ export class ListingStrategyAdvisor {
     /**
      * Get WVS for a style
      */
-    private async getStyleWVS(style: string): Promise<number> {
+    private async getStyleWVS(supabase: SupabaseClient, style: string): Promise<number> {
         const { data } = await supabase
             .from('styles')
             .select('avg_wvs')
@@ -179,6 +173,7 @@ export class ListingStrategyAdvisor {
      * Get competition level
      */
     private async getCompetition(
+        supabase: SupabaseClient,
         style?: string,
         size?: string
     ): Promise<{ level: 'low' | 'medium' | 'high'; count: number }> {
@@ -186,9 +181,6 @@ export class ListingStrategyAdvisor {
             .from('active_listings')
             .select('id', { count: 'exact' })
             .eq('is_active', true);
-
-        // This is a simplified version - real implementation would use
-        // listing_styles junction table and size matching
 
         const { count } = await query;
         const total = count || 0;
@@ -202,10 +194,10 @@ export class ListingStrategyAdvisor {
      * Get price bands for style/size combo
      */
     private async getPriceBands(
+        supabase: SupabaseClient,
         style?: string,
         size?: string
     ): Promise<{ low: number; mid: number; high: number }> {
-        // Try to get from sizes table first
         if (size) {
             const { data: sizeData } = await supabase
                 .from('sizes')
@@ -223,7 +215,6 @@ export class ListingStrategyAdvisor {
             }
         }
 
-        // Get from active listings
         const { data: listings } = await supabase
             .from('active_listings')
             .select('current_price')
@@ -265,18 +256,15 @@ export class ListingStrategyAdvisor {
 
         switch (type) {
             case 'Auction':
-                // Start low to attract bidders
                 base.startingPrice = Math.round(targetPrice * 0.5);
                 base.reservePrice = Math.round(targetPrice * 0.85);
                 break;
 
             case 'BuyItNow':
-                // Competitive but not lowest
                 base.binPrice = Math.round(targetPrice * 1.1);
                 break;
 
             case 'Both':
-                // Auction with BIN option
                 base.startingPrice = Math.round(targetPrice * 0.6);
                 base.binPrice = Math.round(targetPrice * 1.15);
                 break;
@@ -316,18 +304,14 @@ export class ListingStrategyAdvisor {
     /**
      * Batch analyze multiple strategies
      */
-    async analyzeMultiple(inputs: StrategyInput[]): Promise<ListingStrategy[]> {
+    async analyzeMultiple(supabase: SupabaseClient, inputs: StrategyInput[]): Promise<ListingStrategy[]> {
         const results: ListingStrategy[] = [];
         for (const input of inputs) {
-            results.push(await this.getStrategy(input));
+            results.push(await this.getStrategy(supabase, input));
         }
         return results;
     }
 }
-
-// ============================================
-// Singleton Instance
-// ============================================
 
 let advisorInstance: ListingStrategyAdvisor | null = null;
 

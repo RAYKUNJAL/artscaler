@@ -17,7 +17,7 @@ async function testPipeline() {
 
     try {
         const agent = getWVSAgent();
-        const report = await agent.processPipeline(userId);
+        const report = await agent.processPipeline(supabase, userId);
 
         console.log('✅ Pipeline Run Complete');
         console.log('📊 Stats:', {

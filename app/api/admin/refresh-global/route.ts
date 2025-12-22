@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGlobalIntelligenceService } from '@/services/ai/global-intelligence-service';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Endpoint to trigger global data aggregation across all user accounts.
  * This should be hit by a scheduled Cron job (e.g., Vercel Cron).

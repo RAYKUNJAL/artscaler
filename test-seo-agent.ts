@@ -1,4 +1,5 @@
 import { getSEOContentAgent } from './services/ai/seo-content-agent';
+import { supabase } from './lib/supabase/client';
 
 async function testSEOAgent() {
     console.log('🧪 Starting SEO Content Agent Smoke Test...');
@@ -6,7 +7,7 @@ async function testSEOAgent() {
     const agent = getSEOContentAgent();
 
     try {
-        const result = await agent.generateAutoPost();
+        const result = await agent.generateAutoPost(supabase);
 
         if (result.success) {
             console.log('✅ SUCCESS: AI Agent generated and published a blog post!');

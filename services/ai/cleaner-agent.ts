@@ -9,7 +9,7 @@
  * - Deduplicate by URL
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface RawListing {
     id: string;
@@ -43,7 +43,7 @@ export class CleanerAgent {
     /**
      * Clean a batch of raw listings
      */
-    async cleanListings(runId: string, userId: string): Promise<number> {
+    async cleanListings(supabase: SupabaseClient, runId: string, userId: string): Promise<number> {
         try {
             // Fetch raw listings for this run
             const { data: rawListings, error: fetchError } = await supabase

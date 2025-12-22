@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         try {
             const { getWVSAgent } = await import('@/services/ai/wvs-agent');
             const wvsAgent = getWVSAgent();
-            await wvsAgent.processPipeline(user.id);
+            await wvsAgent.processPipeline(supabase, user.id);
             console.log(`[Market Scanner] ✅ WVS Analysis completed for user: ${user.id}`);
         } catch (wvsError) {
             console.error('[Market Scanner] ❌ WVS Pipeline failed:', wvsError);

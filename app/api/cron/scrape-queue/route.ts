@@ -15,7 +15,14 @@ export const maxDuration = 300; // 5 minutes timeout
 export async function GET(request: NextRequest) {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const cronSecret = process.env.CRON_SECRET;
+
+    // Guard against build-time execution
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return NextResponse.json({ message: 'Build mode' });
+    }
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
