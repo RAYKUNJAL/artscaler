@@ -81,7 +81,7 @@ export class PricingService {
             .from('user_profiles')
             .select('subscription_tier')
             .eq('id', userId)
-            .single();
+            .maybeSingle();
 
         const tier = (profile?.subscription_tier || 'free') as TierId;
         const limits = TIER_LIMITS[tier];
@@ -95,7 +95,7 @@ export class PricingService {
             .select('*')
             .eq('user_id', userId)
             .eq('period_start', periodStart.toISOString().split('T')[0])
-            .single();
+            .maybeSingle();
 
         return {
             tier,
