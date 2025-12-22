@@ -25,9 +25,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+            if (error) {
+                console.error("Error getting session:", error);
+            }
             setSession(session);
             setUser(session?.user ?? null);
+            setLoading(false);
+        }).catch(err => {
+            console.error("Unexpected error getting session:", err);
             setLoading(false);
         });
 
@@ -44,62 +50,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signIn = async (email: string, password: string) => {
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (!error) {
-            // Wait for session to be established before navigating
-            const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
-            if (sessErr) {
-                console.error('Session retrieval error after signIn:', sessErr);
-            } else if (sessionData.session) {
-                router.push('/dashboard');
-            } else {
-                console.warn('No session after signIn, will retry in a moment');
-                // Small delay then retry
-                setTimeout(async () => {
-                    const { data: retryData } = await supabase.auth.getSession();
-                    if (retryData.session) router.push('/dashboard');
-                }, 500);
+            if (!error) {
+                // Wait for session to be established before navigating
+                const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
+                if (sessErr) {
+                    console.error('Session retrieval error after signIn:', sessErr);
+                } else if (sessionData.session) {
+                    router.push('/dashboard');
+                } else {
+                    console.warn('No session after signIn, will retry in a moment');
+                    // Small delay then retry
+                    setTimeout(async () => {
+                        const { data: retryData } = await supabase.auth.getSession();
+                        if (retryData.session) router.push('/dashboard');
+                    }, 500);
+                }
             }
+            return { error };
+        } catch (err: any) {
+            console.error("SignIn exception:", err);
+            return { error: { message: err.message || "An unexpected error occurred during sign in.", name: "AuthError" } as AuthError };
         }
-
-        return { error };
     };
 
     const signUp = async (email: string, password: string, fullName: string) => {
-        const { error, data } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: fullName,
+        try {
+            const { error, data } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                    },
                 },
-            },
-        });
+            });
 
-        // Only redirect if we have a session (email confirmation not required)
-        if (!error && data.session) {
-            router.push('/onboarding');
+            // Only redirect if we have a session (email confirmation not required)
+            if (!error && data.session) {
+                router.push('/onboarding');
+            }
+
+            return { error, data };
+        } catch (err: any) {
+            console.error("SignUp exception:", err);
+            return { error: { message: err.message, name: "AuthError" } as AuthError, data: { user: null, session: null } };
         }
-
-        return { error, data };
     };
 
     const signOut = async () => {
-        await supabase.auth.signOut();
-        router.push('/');
+        try {
+            await supabase.auth.signOut();
+            router.push('/');
+        } catch (err) {
+            console.error("SignOut error:", err);
+        }
     };
 
     const signInWithGoogle = async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
+        try {
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+        } catch (err) {
+            console.error("Google SignIn exception:", err);
+        }
     };
 
     const value = {
