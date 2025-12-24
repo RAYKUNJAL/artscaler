@@ -22,41 +22,66 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '50');
         const offset = parseInt(searchParams.get('offset') || '0');
 
-        let query = supabase
-            .from('ebay_sold_listings')
-            .select(`
-                id,
-                title,
-                sold_price,
-                currency,
-                sold_date,
-                item_url,
-                image_url,
-                visual_metadata,
-                search_keyword,
-                parsed_signals (
-                    style,
-                    subject,
-                    medium,
-                    width_in,
-                    height_in
-                )
-            `)
-            .eq('user_id', user.id)
-            .not('image_url', 'is', null)
-            .order('sold_date', { ascending: false });
+        // First try with joined query, fall back to simple query if it fails
+        let listings: any[] = [];
+        let count = 0;
 
-        if (style) {
-            // Check in visual_metadata or parsed_signals
-            query = query.or(`visual_metadata->>primary_style.eq.${style}`);
-        }
+        try {
+            let query = supabase
+                .from('ebay_sold_listings')
+                .select(`
+                    id,
+                    title,
+                    sold_price,
+                    currency,
+                    sold_date,
+                    item_url,
+                    image_url,
+                    visual_metadata,
+                    search_keyword,
+                    parsed_signals (
+                        style,
+                        subject,
+                        medium,
+                        width_in,
+                        height_in
+                    )
+                `)
+                .eq('user_id', user.id)
+                .not('image_url', 'is', null)
+                .order('sold_date', { ascending: false });
 
-        const { data: listings, error, count } = await query
-            .range(offset, offset + limit - 1);
+            if (style) {
+                query = query.or(`visual_metadata->primary_style.eq.${style}`);
+            }
 
-        if (error) {
-            console.error('Gallery API Error:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            const result = await query.range(offset, offset + limit - 1);
+
+            if (result.error) {
+                // If join fails (e.g., missing table/relationship), try simpler query
+                console.warn('Gallery join query failed, trying simple query:', result.error.message);
+                const simpleQuery = await supabase
+                    .from('ebay_sold_listings')
+                    .select('id, title, sold_price, currency, sold_date, item_url, image_url, visual_metadata, search_keyword')
+                    .eq('user_id', user.id)
+                    .not('image_url', 'is', null)
+                    .order('sold_date', { ascending: false })
+                    .range(offset, offset + limit - 1);
+
+                if (simpleQuery.error) {
+                    console.error('Gallery simple query also failed:', simpleQuery.error);
+                    // Return empty result instead of error to prevent page crashes
+                    listings = [];
+                } else {
+                    listings = simpleQuery.data || [];
+                }
+            } else {
+                listings = result.data || [];
+                count = result.count || 0;
+            }
+        } catch (queryError: any) {
+            console.error('Gallery query exception:', queryError);
+            listings = [];
         }
 
         return NextResponse.json({

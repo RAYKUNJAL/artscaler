@@ -175,25 +175,25 @@ export default function Trends() {
 
                                 <div className="space-y-6">
                                     <div className="text-center">
-                                        <p className="text-5xl font-black text-blue-500 mb-2">{topTrends[0].wvs_score.toFixed(1)}</p>
-                                        <p className="text-white font-bold uppercase tracking-tighter text-lg">{topTrends[0].topic_label}</p>
+                                        <p className="text-5xl font-black text-blue-500 mb-2">{(topTrends[0]?.wvs_score ?? 0).toFixed(1)}</p>
+                                        <p className="text-white font-bold uppercase tracking-tighter text-lg">{topTrends[0]?.topic_label ?? 'N/A'}</p>
                                         <p className="text-gray-400 text-sm">Highest Current Velocity</p>
                                     </div>
 
                                     <div className="pt-6 border-t border-white/5 space-y-4">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-400">Avg Market Price</span>
-                                            <span className="text-white font-bold">${topTrends[0].median_price}</span>
+                                            <span className="text-white font-bold">${topTrends[0]?.median_price ?? 0}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-400">Bid Momentum</span>
-                                            <span className="text-green-500 font-bold">+{topTrends[0].bid_momentum.toFixed(1)}x</span>
+                                            <span className="text-green-500 font-bold">+{(topTrends[0]?.bid_momentum ?? 0).toFixed(1)}x</span>
                                         </div>
                                     </div>
 
                                     <div className="mt-8 bg-black/40 rounded-xl p-4 border border-white/5">
                                         <p className="text-xs text-blue-200 leading-relaxed italic">
-                                            "Subject '{topTrends[0].topic_label}' is showing extreme auction intensity. We recommend shifting inventory to 3-day auctions for this niche."
+                                            "Subject '{topTrends[0]?.topic_label ?? 'Unknown'}' is showing extreme auction intensity. We recommend shifting inventory to 3-day auctions for this niche."
                                         </p>
                                     </div>
                                 </div>
@@ -223,18 +223,18 @@ export default function Trends() {
                                                     {trend.topic_label}
                                                 </td>
                                                 <td className="px-8 py-6 text-center">
-                                                    <span className={`text-xl font-black ${trend.wvs_score > 7 ? 'text-green-400' : trend.wvs_score > 4 ? 'text-blue-400' : 'text-gray-600'}`}>
-                                                        {trend.wvs_score.toFixed(1)}
+                                                    <span className={`text-xl font-black ${(trend.wvs_score ?? 0) > 7 ? 'text-green-400' : (trend.wvs_score ?? 0) > 4 ? 'text-blue-400' : 'text-gray-600'}`}>
+                                                        {(trend.wvs_score ?? 0).toFixed(1)}
                                                     </span>
                                                 </td>
                                                 <td className="px-8 py-6 text-center text-gray-400 font-medium">
-                                                    {trend.bid_momentum.toFixed(2)}x
+                                                    {(trend.bid_momentum ?? 0).toFixed(2)}x
                                                 </td>
                                                 <td className="px-8 py-6 text-center text-white font-black">
-                                                    ${trend.median_price.toFixed(0)}
+                                                    ${(trend.median_price ?? 0).toFixed(0)}
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
-                                                    {trend.wvs_score > 6 ? (
+                                                    {(trend.wvs_score ?? 0) > 6 ? (
                                                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-950/30 border border-green-500/20 text-green-500 text-[10px] font-black uppercase tracking-widest rounded-lg">
                                                             <ArrowUpRight className="h-3 w-3" /> Pumping
                                                         </span>

@@ -117,7 +117,7 @@ export default function Dashboard() {
                             <Activity className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-3xl md:text-4xl font-black text-white">{stats.avgWvs.toFixed(2)}</p>
+                            <p className="text-3xl md:text-4xl font-black text-white">{(stats.avgWvs ?? 0).toFixed(2)}</p>
                             <p className="text-xs text-gray-400 flex items-center gap-1 font-medium">
                                 <TrendingUp className="h-3 w-3 text-green-500" />
                                 +2.4% from yesterday
@@ -131,7 +131,7 @@ export default function Dashboard() {
                             <Package className="h-5 w-5 text-purple-500 group-hover:scale-110 transition-transform" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-3xl md:text-4xl font-black text-white">{stats.activeListings.toLocaleString()}</p>
+                            <p className="text-3xl md:text-4xl font-black text-white">{(stats.activeListings ?? 0).toLocaleString()}</p>
                             <p className="text-xs text-gray-400 font-medium">Active Art Listings</p>
                         </div>
                     </div>
@@ -153,7 +153,7 @@ export default function Dashboard() {
                             <DollarSign className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-3xl md:text-4xl font-black text-white">${(stats.estimatedMarketCap / 1000).toFixed(1)}k</p>
+                            <p className="text-3xl md:text-4xl font-black text-white">${((stats.estimatedMarketCap ?? 0) / 1000).toFixed(1)}k</p>
                             <p className="text-xs text-gray-400 font-medium">Under Monitoring</p>
                         </div>
                     </div>
@@ -219,8 +219,8 @@ export default function Dashboard() {
                                                     <span className="text-xs md:text-sm font-black text-gray-600">0{index + 1}</span>
                                                     <span className="text-xs md:text-sm font-bold text-white uppercase tracking-wider">{item.style}</span>
                                                 </div>
-                                                <span className={`text-xs md:text-sm font-black ${getWvsColor(item.avgWvs)}`}>
-                                                    {item.avgWvs.toFixed(2)} WVS
+                                                <span className={`text-xs md:text-sm font-black ${getWvsColor(item.avgWvs ?? 0)}`}>
+                                                    {(item.avgWvs ?? 0).toFixed(2)} WVS
                                                 </span>
                                             </div>
                                             <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
@@ -250,7 +250,7 @@ export default function Dashboard() {
                             <div className="text-sm text-gray-400 leading-relaxed">
                                 {stats.topStyles.length > 0 ? (
                                     <>
-                                        Market velocity for <strong>{stats.topStyles[0].style}</strong> is currently at <strong>{stats.topStyles[0].avgWvs.toFixed(1)} WVS</strong>.
+                                        Market velocity for <strong>{stats.topStyles[0]?.style ?? 'N/A'}</strong> is currently at <strong>{(stats.topStyles[0]?.avgWvs ?? 0).toFixed(1)} WVS</strong>.
                                         We recommend optimizing your listings with "Original Signed" tags to capture this momentum.
                                     </>
                                 ) : (
