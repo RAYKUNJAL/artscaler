@@ -27,8 +27,8 @@ export default function EbayNotificationsPage() {
                                 <p><strong className="text-purple-300">Application URL:</strong> https://www.artscaler.com</p>
                                 <p><strong className="text-purple-300">Notifications Endpoint:</strong> https://www.artscaler.com/ebay/notifications</p>
                                 <p><strong className="text-purple-300">Developer:</strong> Ray Kunja</p>
-                                <p><strong className="text-purple-300">App ID (Sandbox):</strong> [REDACTED]</p>
-                                <p><strong className="text-purple-300">Dev ID:</strong> [REDACTED]</p>
+                                <p><strong className="text-purple-300">App ID:</strong> ArtScaler-Production</p>
+                                <p><strong className="text-purple-300">Environment:</strong> Production</p>
                             </div>
                         </section>
 

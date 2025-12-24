@@ -4,7 +4,7 @@
 
 const https = require('https');
 
-const EBAY_APP_ID = process.env.EBAY_APP_ID || '[REDACTED]';
+const EBAY_APP_ID = process.env.EBAY_APP_ID || '';
 
 async function testEbayAPI(keywords = 'painting 9 x 12') {
     console.log('🚀 Testing eBay Finding API');

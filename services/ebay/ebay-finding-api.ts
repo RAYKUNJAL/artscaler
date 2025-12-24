@@ -31,7 +31,7 @@ export class EbayFindingAPIService {
 
     constructor() {
         // Get from environment variables
-        this.appId = process.env.EBAY_APP_ID || '[REDACTED]';
+        this.appId = process.env.EBAY_APP_ID || '';
     }
 
     /**

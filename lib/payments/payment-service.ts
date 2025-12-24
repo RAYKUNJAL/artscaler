@@ -126,7 +126,7 @@ export class PaymentService {
      * Get PayPal Client ID
      */
     static getPayPalClientId(): string {
-        return process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'AXWSkiaiL5j8-1ajeK91hk_xjlWXX2wYLVbeT0DyJvW3EHccOQ-fHUVB2Z4yxp8_Mye9nWWbKcZUKZZ0';
+        return process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
     }
 
     /**

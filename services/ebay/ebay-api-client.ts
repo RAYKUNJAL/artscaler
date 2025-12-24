@@ -88,7 +88,8 @@ export class EbayApiClient {
 
             const response = await fetch(url, {
                 headers: {
-                    'X-EBAY-SOA-SECURITY-TOKEN': token,
+                    'Authorization': `Bearer ${token}`,
+                    'X-EBAY-SOA-SECURITY-APPNAME': appId || '',
                     'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
                     'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON'
                 }
@@ -140,7 +141,8 @@ export class EbayApiClient {
 
             const response = await fetch(url, {
                 headers: {
-                    'X-EBAY-SOA-SECURITY-TOKEN': token,
+                    'Authorization': `Bearer ${token}`,
+                    'X-EBAY-SOA-SECURITY-APPNAME': appId || '',
                     'X-EBAY-SOA-OPERATION-NAME': 'findItemsByKeywords',
                     'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON'
                 }
