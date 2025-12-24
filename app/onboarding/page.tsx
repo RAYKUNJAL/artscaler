@@ -77,15 +77,16 @@ export default function OnboardingPage() {
         setLoading(true);
 
         try {
-            // Update user profile
+            // Update user profile (use upsert to create if it doesn't exist)
             console.log('Updating user profile...');
             const { error: profileError } = await supabase
                 .from('user_profiles')
-                .update({
+                .upsert({
+                    id: user.id,
+                    email: user.email,
                     onboarding_completed: true,
                     onboarding_step: 4,
-                })
-                .eq('id', user.id);
+                }, { onConflict: 'id' });
 
             if (profileError) {
                 console.error('Profile update error:', profileError);
