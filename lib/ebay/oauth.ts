@@ -21,6 +21,13 @@ export async function getEbayAccessToken(): Promise<string> {
         throw new Error('eBay credentials (CLIENT_ID, CLIENT_SECRET) not configured');
     }
 
+    // Check for manual user token override (useful for production testing)
+    const userToken = process.env.EBAY_USER_TOKEN;
+    if (userToken && userToken !== '') {
+        console.log('[eBay OAuth] Using manual user token from environment');
+        return userToken;
+    }
+
     // Return cached token if still valid (with 60s buffer)
     if (cachedToken && Date.now() < tokenExpiry - 60000) {
         return cachedToken;
@@ -52,7 +59,7 @@ export async function getEbayAccessToken(): Promise<string> {
     }
 
     const data: EbayTokenResponse = await response.json();
-    
+
     cachedToken = data.access_token;
     tokenExpiry = Date.now() + (data.expires_in * 1000);
 
