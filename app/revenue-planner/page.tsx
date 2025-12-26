@@ -87,7 +87,6 @@ export default function RevenuePlannerPage() {
                 setProgress(data.progress);
                 setIsDemo(false);
             } else {
-                // Set a solid Demo Plan ($20k track)
                 setPlan({
                     targetMonthly: 20000,
                     achievable: true,
@@ -127,7 +126,6 @@ export default function RevenuePlannerPage() {
                 setIsDemo(true);
             }
         } catch (err) {
-            console.error('Error loading plan:', err);
             setIsDemo(true);
         } finally {
             setIsLoading(false);
@@ -151,10 +149,9 @@ export default function RevenuePlannerPage() {
             const data = await res.json();
             if (data.success) {
                 setPlan(data.plan);
-                await loadPlan(); // Refresh progress
+                await loadPlan();
             }
         } catch (err) {
-            console.error('Error generating plan:', err);
         } finally {
             setIsGenerating(false);
         }
@@ -178,327 +175,206 @@ export default function RevenuePlannerPage() {
                 setSimulation(data.simulation);
             }
         } catch (err) {
-            console.error('Error running simulation:', err);
         }
     };
 
     const presetTargets = [5000, 10000, 20000, 30000, 50000];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-blue-950 to-purple-950">
-            {/* Header */}
-            <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-10">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <a href="/dashboard" className="text-gray-400 hover:text-white transition-colors" title="Back to Dashboard">
+        <div className="min-h-screen bg-gray-950 selection:bg-green-500 selection:text-white">
+            <header className="border-b border-white/5 bg-gray-900/50 backdrop-blur-xl sticky top-0 z-50">
+                <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <a href="/dashboard" className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all" title="Back to Dashboard">
                             <ArrowLeft className="h-5 w-5" />
                         </a>
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-green-600 rounded-lg">
-                                <Target className="h-6 w-6 text-white" />
+                            <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-600/20">
+                                <Target className="h-5 w-5 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-white">Revenue Planner</h1>
-                                <p className="text-sm text-gray-400">Plan your path up to $20K/month</p>
-                                {isDemo && (
-                                    <div className="mt-2 inline-flex items-center gap-2 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-amber-500">
-                                        <AlertCircle className="h-3 w-3" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">{getDemoBadge('Growth Planner')}</span>
-                                    </div>
-                                )}
+                                <h1 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">Growth Engine</h1>
+                                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mt-1">Goal: ${targetMonthly.toLocaleString()} Revenue</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-8">
-                {/* Progress Bar (if plan exists) */}
-                {progress && plan && (
-                    <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6 mb-8">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="text-lg font-semibold text-white">Monthly Progress</h3>
-                                <p className="text-sm text-gray-400">{progress.daysRemaining} days remaining</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-3xl font-bold text-white">
-                                    ${progress.achieved.toLocaleString()}
-                                    <span className="text-gray-500 text-lg font-normal">
-                                        /${progress.target.toLocaleString()}
-                                    </span>
-                                </p>
-                                <p className="text-sm text-gray-400">{progress.percentComplete}% complete</p>
-                            </div>
+            <main className="container mx-auto px-6 py-12">
+                {/* V6 Title Row */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+                    <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Revenue Command Center</span>
                         </div>
-                        <div className="h-4 bg-gray-800 rounded-full overflow-hidden">
-                            <div
-                                className={`h-full transition-all duration-500 ${progress.percentComplete >= 100
-                                    ? 'bg-green-500'
-                                    : progress.percentComplete >= 50
-                                        ? 'bg-blue-500'
-                                        : 'bg-purple-500'
-                                    }`}
-                                style={{ width: `${Math.min(progress.percentComplete, 100)}%` }}
-                            />
-                        </div>
+                        <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase italic leading-[0.9]">
+                            Scale To <span className="text-green-500">${(targetMonthly / 1000)}K</span> <br />
+                            <span className="text-gray-700">Monthly Revenue</span>
+                        </h2>
                     </div>
-                )}
-
-                {/* Input Form */}
-                <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6 mb-8">
-                    <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                        <Calculator className="h-5 w-5 text-blue-400" />
-                        Configure Your Goal
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* Target Monthly */}
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-2">Monthly Target ($)</label>
-                            <input
-                                id="target_monthly_input"
-                                type="number"
-                                value={targetMonthly}
-                                title="Target Monthly Revenue"
-                                onChange={(e) => setTargetMonthly(parseInt(e.target.value) || 0)}
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:border-blue-500"
-                            />
-                            <div className="flex gap-2 mt-2">
-                                {presetTargets.map((preset) => (
-                                    <button
-                                        key={preset}
-                                        onClick={() => setTargetMonthly(preset)}
-                                        className={`px-2 py-1 text-xs rounded ${targetMonthly === preset
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                                            }`}
-                                    >
-                                        ${(preset / 1000)}K
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Avg Sale Price */}
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-2">Avg Sale Price ($)</label>
-                            <input
-                                id="avg_sale_price_input"
-                                type="number"
-                                value={avgSalePrice}
-                                title="Average Sale Price"
-                                onChange={(e) => setAvgSalePrice(parseInt(e.target.value) || 0)}
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:border-blue-500"
-                            />
-                            <p className="text-xs text-gray-500 mt-2">Based on your typical pricing</p>
-                        </div>
-
-                        {/* Sell-through Rate */}
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-2">
-                                Sell-through Rate: {Math.round(sellThroughRate * 100)}%
-                            </label>
-                            <input
-                                id="sell_through_rate_input"
-                                type="range"
-                                min="0.1"
-                                max="0.9"
-                                step="0.1"
-                                value={sellThroughRate}
-                                title="Target Sell-through Rate"
-                                onChange={(e) => setSellThroughRate(parseFloat(e.target.value))}
-                                className="w-full h-3 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                            />
-                            <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>10%</span>
-                                <span>50%</span>
-                                <span>90%</span>
-                            </div>
-                        </div>
-
-                        {/* Weekly Capacity */}
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-2">Weekly Capacity</label>
-                            <input
-                                id="weekly_capacity_input"
-                                type="number"
-                                value={weeklyCapacity}
-                                title="Weekly Content Capacity"
-                                onChange={(e) => setWeeklyCapacity(parseInt(e.target.value) || 0)}
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:border-blue-500"
-                            />
-                            <p className="text-xs text-gray-500 mt-2">Pieces you can create per week</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 mt-6">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={generatePlan}
                             disabled={isGenerating}
-                            className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                            className="bg-green-600 hover:bg-green-500 text-white font-black uppercase tracking-[0.2em] px-8 py-4 rounded-2xl shadow-xl shadow-green-600/20 transition-all hover:scale-105 disabled:opacity-50"
                         >
-                            {isGenerating ? (
-                                <RefreshCw className="h-5 w-5 animate-spin" />
-                            ) : (
-                                <Sparkles className="h-5 w-5" />
-                            )}
-                            Generate Plan
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                setShowSimulator(!showSimulator);
-                                if (!showSimulator) runSimulation();
-                            }}
-                            className="flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors"
-                        >
-                            <Calculator className="h-5 w-5" />
-                            {showSimulator ? 'Hide' : 'Show'} Simulator
-                            {showSimulator ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {isGenerating ? 'Analyzing...' : 'Refresh Strategy'}
                         </button>
                     </div>
-
-                    {/* Simulator */}
-                    {showSimulator && simulation && (
-                        <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                            <h4 className="text-sm font-semibold text-white mb-3">Quick Simulation</h4>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <p className="text-xs text-gray-500">Pieces to List</p>
-                                    <p className="text-xl font-bold text-white">{simulation.piecesToList}/mo</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500">Est. Revenue</p>
-                                    <p className="text-xl font-bold text-green-400">${simulation.estimatedRevenue.toLocaleString()}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500">Achievable?</p>
-                                    <div className={`flex items-center gap-2 ${simulation.achievable ? 'text-green-400' : 'text-yellow-400'}`}>
-                                        {simulation.achievable ? (
-                                            <CheckCircle2 className="h-5 w-5" />
-                                        ) : (
-                                            <AlertTriangle className="h-5 w-5" />
-                                        )}
-                                        <span className="text-lg font-bold">{simulation.achievable ? 'Yes!' : 'Stretch'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                {/* Plan Results */}
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <RefreshCw className="h-8 w-8 text-blue-400 animate-spin" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    {/* Configuration Card */}
+                    <div className="bg-gray-900 border border-gray-800 rounded-[32px] p-8 space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center">
+                                <Calculator className="h-5 w-5 text-blue-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Goal Parameters</h3>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Target Monthly Revenue</label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <input
+                                        id="target_monthly_input"
+                                        title="Target Monthly Revenue"
+                                        type="number"
+                                        value={targetMonthly}
+                                        onChange={(e) => setTargetMonthly(parseInt(e.target.value) || 0)}
+                                        className="w-full bg-gray-800 border border-gray-700 rounded-2xl pl-12 pr-4 py-4 text-xl font-black text-white focus:outline-none focus:border-green-500 transition-all"
+                                    />
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    {presetTargets.map(t => (
+                                        <button
+                                            key={t}
+                                            onClick={() => setTargetMonthly(t)}
+                                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${targetMonthly === t ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-500 hover:text-white'}`}
+                                        >
+                                            ${(t / 1000)}K
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Average Sale Price</label>
+                                <input
+                                    id="avg_sale_price_input"
+                                    title="Average Sale Price"
+                                    type="number"
+                                    value={avgSalePrice}
+                                    onChange={(e) => setAvgSalePrice(parseInt(e.target.value) || 0)}
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-4 text-xl font-black text-white focus:outline-none focus:border-green-500 transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Target Sell-Through</label>
+                                    <span className="text-sm font-black text-green-500 uppercase">{Math.round(sellThroughRate * 100)}%</span>
+                                </div>
+                                <input
+                                    id="sell_through_rate_input"
+                                    title="Target Sell-Through Rate"
+                                    type="range"
+                                    min="0.1"
+                                    max="0.9"
+                                    step="0.1"
+                                    value={sellThroughRate}
+                                    onChange={(e) => setSellThroughRate(parseFloat(e.target.value))}
+                                    className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-green-500"
+                                />
+                            </div>
+                        </div>
                     </div>
-                ) : plan ? (
-                    <div className="space-y-8">
-                        {/* Status Banner */}
-                        <div className={`p-4 rounded-xl flex items-center gap-4 ${plan.achievable
-                            ? 'bg-green-500/10 border border-green-500/30'
-                            : 'bg-yellow-500/10 border border-yellow-500/30'
-                            }`}>
-                            {plan.achievable ? (
-                                <>
-                                    <CheckCircle2 className="h-8 w-8 text-green-400 flex-shrink-0" />
-                                    <div>
-                                        <p className="font-semibold text-green-400">Target is Achievable!</p>
-                                        <p className="text-sm text-green-300/70">
-                                            With your current capacity, you can reach ${plan.targetMonthly.toLocaleString()}/month
-                                        </p>
+
+                    {/* Progress & Summary */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {progress && (
+                            <div className="bg-gray-900 border border-gray-800 rounded-[32px] p-8 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-green-600/5 blur-[80px] rounded-full"></div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div>
+                                            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Current Velocity</h3>
+                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">{progress.daysRemaining} Days Left in Cycle</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-4xl font-black text-white">${progress.achieved.toLocaleString()}</p>
+                                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mt-1">Achieved So Far</p>
+                                        </div>
                                     </div>
-                                </>
-                            ) : (
-                                <>
-                                    <AlertTriangle className="h-8 w-8 text-yellow-400 flex-shrink-0" />
-                                    <div>
-                                        <p className="font-semibold text-yellow-400">Target Requires Adjustments</p>
-                                        <p className="text-sm text-yellow-300/70">
-                                            Gap of ${Math.abs(plan.summary.gap).toLocaleString()} - see recommendations below
-                                        </p>
+
+                                    <div className="h-6 bg-gray-800 rounded-full overflow-hidden p-1.5 mb-4">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all duration-1000 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                                            style={{ width: `${progress.percentComplete}%` }}
+                                        />
                                     </div>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <Package className="h-5 w-5 text-purple-400" />
-                                    <span className="text-gray-400 text-sm">Pieces to List</span>
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">{progress.percentComplete}% Completion Rate</p>
                                 </div>
-                                <p className="text-3xl font-bold text-white">{plan.summary.totalPiecesToList}</p>
-                                <p className="text-sm text-gray-500 mt-1">{plan.summary.totalPiecesNeeded} need to sell</p>
                             </div>
+                        )}
 
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <TrendingUp className="h-5 w-5 text-blue-400" />
-                                    <span className="text-gray-400 text-sm">Weekly Output</span>
-                                </div>
-                                <p className="text-3xl font-bold text-white">{plan.summary.weeklyOutput}</p>
-                                <p className="text-sm text-gray-500 mt-1">pieces per week</p>
+                        {plan && (
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                {[
+                                    { label: 'Pieces Needed', value: plan.summary.totalPiecesToList, icon: Package, color: 'blue' },
+                                    { label: 'Weekly Target', value: plan.summary.weeklyOutput, icon: TrendingUp, color: 'purple' },
+                                    { label: 'Min. Avg Price', value: `$${plan.summary.avgPriceNeeded}`, icon: DollarSign, color: 'green' },
+                                    { label: 'Projected Rev.', value: `$${plan.summary.estimatedRevenue.toLocaleString()}`, icon: Target, color: 'amber' }
+                                ].map(s => (
+                                    <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-3xl p-6">
+                                        <div className={`w-8 h-8 bg-${s.color}-600/10 rounded-lg flex items-center justify-center mb-4`}>
+                                            <s.icon className={`h-4 w-4 text-${s.color}-500`} />
+                                        </div>
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{s.label}</p>
+                                        <p className="text-2xl font-black text-white">{s.value}</p>
+                                    </div>
+                                ))}
                             </div>
+                        )}
+                    </div>
+                </div>
 
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <DollarSign className="h-5 w-5 text-green-400" />
-                                    <span className="text-gray-400 text-sm">Avg Price Needed</span>
-                                </div>
-                                <p className="text-3xl font-bold text-white">${plan.summary.avgPriceNeeded}</p>
-                                <p className="text-sm text-gray-500 mt-1">per piece</p>
+                {plan && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Breakdown Table */}
+                        <div className="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-[32px] overflow-hidden">
+                            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Production Blueprint</h3>
+                                <button className="p-2.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl transition-all" title="Export Plan">
+                                    <ArrowLeft className="h-4 w-4 rotate-180" />
+                                </button>
                             </div>
-
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <Target className="h-5 w-5 text-emerald-400" />
-                                    <span className="text-gray-400 text-sm">Est. Revenue</span>
-                                </div>
-                                <p className="text-3xl font-bold text-white">${plan.summary.estimatedRevenue.toLocaleString()}</p>
-                                {plan.summary.gap !== 0 && (
-                                    <p className={`text-sm mt-1 ${plan.summary.gap > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                        {plan.summary.gap > 0 ? '-' : '+'}${Math.abs(plan.summary.gap).toLocaleString()} from target
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Production Breakdown */}
-                        <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                            <h3 className="text-lg font-semibold text-white mb-4">Production Breakdown</h3>
                             <div className="overflow-x-auto">
-                                <table className="w-full">
+                                <table className="w-full text-left">
                                     <thead>
-                                        <tr className="text-left text-gray-400 text-sm border-b border-gray-800">
-                                            <th className="pb-3">Style</th>
-                                            <th className="pb-3">Size</th>
-                                            <th className="pb-3">Count</th>
-                                            <th className="pb-3">Target Price</th>
-                                            <th className="pb-3">Expected Revenue</th>
-                                            <th className="pb-3">Demand</th>
+                                        <tr className="bg-white/[0.02] border-b border-white/5">
+                                            <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Asset Category</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Volume</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest">Unit Price</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Potential</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="text-white">
-                                        {plan.breakdown.map((item, index) => (
-                                            <tr key={index} className="border-b border-gray-800/50">
-                                                <td className="py-3 capitalize font-medium">{item.style}</td>
-                                                <td className="py-3">{item.size}</td>
-                                                <td className="py-3">{item.count} pcs</td>
-                                                <td className="py-3">${item.targetPrice}</td>
-                                                <td className="py-3 text-green-400">${item.expectedRevenue.toLocaleString()}</td>
-                                                <td className="py-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-16 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                                            <div
-                                                                className="h-full bg-blue-500"
-                                                                style={{ width: `${item.demandScore}%` }}
-                                                            />
-                                                        </div>
-                                                        <span className="text-sm text-gray-400">{item.demandScore}</span>
-                                                    </div>
+                                    <tbody className="divide-y divide-white/5">
+                                        {plan.breakdown.map((item, idx) => (
+                                            <tr key={idx} className="group hover:bg-white/[0.02] transition-colors">
+                                                <td className="px-8 py-6">
+                                                    <p className="text-sm font-black text-white uppercase tracking-tight">{item.style}</p>
+                                                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mt-1">Size: {item.size}</p>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-sm font-black text-white">{item.count} Units</p>
+                                                </td>
+                                                <td className="px-8 py-6 text-sm font-black text-white">${item.targetPrice}</td>
+                                                <td className="px-8 py-6 text-right">
+                                                    <p className="text-sm font-black text-green-500 uppercase tracking-widest">${item.expectedRevenue.toLocaleString()}</p>
                                                 </td>
                                             </tr>
                                         ))}
@@ -507,50 +383,41 @@ export default function RevenuePlannerPage() {
                             </div>
                         </div>
 
-                        {/* Recommendations */}
-                        <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <Lightbulb className="h-5 w-5 text-yellow-400" />
-                                Recommendations
-                            </h3>
-                            <ul className="space-y-3">
-                                {plan.recommendations.map((rec, index) => (
-                                    <li key={index} className="flex items-start gap-3 text-gray-300">
-                                        <span className="text-xl leading-none">{rec.charAt(0)}</span>
-                                        <span>{rec.slice(2)}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                        {/* AI Insights & What-If */}
+                        <div className="space-y-8">
+                            <div className="bg-gradient-to-br from-green-600 to-emerald-800 rounded-[32px] p-8 text-white relative overflow-hidden group">
+                                <div className="relative z-10">
+                                    <h4 className="text-xl font-black uppercase italic tracking-tighter mb-4 flex items-center gap-2">
+                                        <Sparkles className="h-5 w-5" /> AI Recommendations
+                                    </h4>
+                                    <div className="space-y-4">
+                                        {plan.recommendations.map((rec, i) => (
+                                            <div key={i} className="flex items-start gap-4">
+                                                <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-white/50" />
+                                                <p className="text-xs font-bold leading-relaxed">{rec.slice(2)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <Lightbulb className="absolute -right-8 -bottom-8 h-40 w-40 text-white/5 transition-transform group-hover:scale-110" />
+                            </div>
+
+                            <div className="bg-gray-900 border border-gray-800 rounded-[32px] p-8">
+                                <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6">Simulation Models</h4>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Elite Pricing Strategy</p>
+                                        <p className="text-sm font-black text-white">${plan.adjustments.ifHigherPrice.price} Avg</p>
+                                        <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest mt-1">Reduces volume by {Math.round((1 - plan.adjustments.ifHigherPrice.piecesNeeded / plan.summary.totalPiecesNeeded) * 100)}%</p>
+                                    </div>
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Max Output Strategy</p>
+                                        <p className="text-sm font-black text-white">{plan.adjustments.ifMoreOutput.weekly}/week</p>
+                                        <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-1">Yields ${(plan.adjustments.ifMoreOutput.weekly * 4 * avgSalePrice * sellThroughRate).toLocaleString()} Revenue</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        {/* What-If Scenarios */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <h4 className="text-sm font-semibold text-gray-400 mb-3">If Higher Price</h4>
-                                <p className="text-2xl font-bold text-white">${plan.adjustments.ifHigherPrice.price}/piece</p>
-                                <p className="text-sm text-gray-500">Only need {plan.adjustments.ifHigherPrice.piecesNeeded} pieces</p>
-                            </div>
-
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <h4 className="text-sm font-semibold text-gray-400 mb-3">If More Output</h4>
-                                <p className="text-2xl font-bold text-white">{plan.adjustments.ifMoreOutput.weekly}/week</p>
-                                <p className="text-sm text-gray-500">{plan.adjustments.ifMoreOutput.piecesNeeded} pieces/month</p>
-                            </div>
-
-                            <div className="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-                                <h4 className="text-sm font-semibold text-gray-400 mb-3">If Better Sell-through</h4>
-                                <p className="text-2xl font-bold text-white">{Math.round(plan.adjustments.ifBetterSellThrough.rate * 100)}%</p>
-                                <p className="text-sm text-gray-500">Only list {plan.adjustments.ifBetterSellThrough.piecesNeeded} pieces</p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center py-20">
-                        <Target className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-2">No Plan Generated Yet</h3>
-                        <p className="text-gray-400 mb-6">
-                            Set your targets above and generate your first revenue plan
-                        </p>
                     </div>
                 )}
             </main>

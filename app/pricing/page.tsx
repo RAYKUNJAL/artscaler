@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Zap, Crown, Rocket, Star, Eye, Palette } from 'lucide-react';
+import { Check, Zap, Crown, Rocket, Star, Eye, Palette, Shield } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { PaymentService, type BillingCycle } from '@/lib/payments/payment-service';
 import { createClient } from '@/lib/supabase/client';
@@ -25,56 +25,71 @@ export default function PricingPage() {
     const plans = [
         {
             id: 'free',
-            name: 'Free Scout',
+            name: 'Scout Lite',
             icon: Eye,
             price: { monthly: 0, yearly: 0 },
-            description: 'Perfect for exploring the platform',
+            description: 'Trial the pulse with essential scans.',
             features: [
-                '10 daily searches',
-                '3 keyword tracking',
-                '7 days historical data',
-                'Standard WVS access',
-                'Community support'
+                '10 Market Scans / day',
+                'Visual Pulse Preview',
+                'Basic WVS Signals',
+                'Community Data Stream',
+                'Price Guide Access'
             ],
-            cta: 'Get Started Free',
+            cta: 'Start Scouting',
             popular: false,
-            color: 'from-gray-600 to-gray-700'
+            color: 'from-gray-700 to-gray-800'
         },
         {
-            id: 'pro',
-            name: 'Pro Painter',
-            icon: Palette,
+            id: 'solo',
+            name: 'Solo Artist',
+            icon: Star,
             price: { monthly: 29, yearly: 290 },
-            description: 'For serious artists starting to scale',
+            description: 'For artists building their eBay presence.',
             features: [
-                '100 daily searches',
-                '25 keyword tracking',
-                '30 days historical data',
-                'Global Market Pulse',
-                'AI Market Advisor',
-                'Smart alerts'
+                '100 Market Scans / day',
+                'Full WVS Demand Scores',
+                'Smart Pricing Models',
+                '30-Day Market History',
+                'Growth Engine Planner'
             ],
-            cta: 'Start Pro Plan',
-            popular: true,
+            cta: 'Scale Now',
+            popular: false,
             color: 'from-blue-600 to-blue-700'
         },
         {
             id: 'studio',
-            name: 'Studio Empire',
-            icon: Rocket,
+            name: 'Studio Pro',
+            icon: Shield,
             price: { monthly: 79, yearly: 790 },
-            description: 'For established studios & galleries',
+            description: 'The standard for professional art studios.',
             features: [
-                '1,000 daily searches',
-                'Unlimited keyword tracking',
-                'Full historical data',
-                'Full AI Pipeline access',
-                'AI Market Advisor',
-                'Auto-listing generation'
+                'Unlimited Market Scans',
+                'Advanced Niche Clusters',
+                'Competitor Spy Tools',
+                'Auto-Niche Discovery',
+                'Revenue Simulation PRO'
             ],
-            cta: 'Upgrade to Studio+',
-            popular: false,
+            cta: 'Dominate Market',
+            popular: true,
             color: 'from-purple-600 to-purple-700'
+        },
+        {
+            id: 'empire',
+            name: 'Empire Scale',
+            icon: Zap,
+            price: { monthly: 199, yearly: 1990 },
+            description: 'Full Art Intelligence dominance.',
+            features: [
+                'Full Empire Automation',
+                'AI Listing Generation',
+                'Custom Brief Intelligence',
+                'Elite Studio Analytics',
+                'Priority API Infrastructure'
+            ],
+            cta: 'Build Empire',
+            popular: false,
+            color: 'from-orange-500 to-orange-600'
         }
     ];
 
@@ -115,156 +130,197 @@ export default function PricingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 py-20 px-4">
+        <div className="min-h-screen bg-gray-950 selection:bg-blue-500 selection:text-white">
             <Header />
-            <div className="max-w-7xl mx-auto pt-16">
-                {/* Header */}
-                <div className="text-center mb-16">
-                    <h1 className="text-5xl font-black text-white mb-4">
-                        Choose Your <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Pulse Plan</span>
-                    </h1>
-                    <p className="text-xl text-gray-300 mb-2">
-                        Scale your eBay art business with real-time demand intelligence
-                    </p>
-                    <p className="text-blue-400 font-black uppercase tracking-widest text-xs mb-8">
-                        Includes 90-Day Money-Back Guarantee
-                    </p>
 
-                    {/* Billing Toggle */}
-                    <div className="inline-flex items-center gap-4 bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-2">
-                        <button
-                            onClick={() => setBillingCycle('monthly')}
-                            className={`px-6 py-3 rounded-xl font-bold transition-all ${billingCycle === 'monthly'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
-                        >
-                            Monthly
-                        </button>
-                        <button
-                            onClick={() => setBillingCycle('yearly')}
-                            className={`px-6 py-3 rounded-xl font-bold transition-all relative ${billingCycle === 'yearly'
-                                ? 'bg-blue-600 text-white shadow-lg'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
-                        >
-                            Yearly
-                            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                                SAVE 17%
-                            </span>
-                        </button>
+            <div className="relative pt-32 pb-24 overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-600/10 blur-[120px] rounded-full -z-10"></div>
+
+                <div className="max-w-7xl mx-auto px-4">
+                    {/* Hero Header */}
+                    <div className="text-center mb-20">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full mb-6">
+                            <Zap className="h-4 w-4 text-blue-500" />
+                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Pricing & Plans</span>
+                        </div>
+                        <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter uppercase italic leading-[0.9]">
+                            Choose Your <span className="text-blue-500">Pulse</span> Level
+                        </h1>
+                        <p className="text-xl text-gray-400 font-bold max-w-2xl mx-auto mb-8">
+                            Unlock the #1 intelligence platform for eBay art sellers and scale your revenue today.
+                        </p>
+
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="inline-flex items-center p-1.5 bg-gray-900 border border-white/5 rounded-2xl">
+                                <button
+                                    onClick={() => setBillingCycle('monthly')}
+                                    className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${billingCycle === 'monthly'
+                                        ? 'bg-blue-600 text-white shadow-lg'
+                                        : 'text-gray-500 hover:text-white'
+                                        }`}
+                                >
+                                    Monthly
+                                </button>
+                                <button
+                                    onClick={() => setBillingCycle('yearly')}
+                                    className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative ${billingCycle === 'yearly'
+                                        ? 'bg-blue-600 text-white shadow-lg'
+                                        : 'text-gray-500 hover:text-white'
+                                        }`}
+                                >
+                                    Yearly
+                                    <span className="absolute -top-3 -right-3 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-green-500/20">
+                                        SAVE 20%
+                                    </span>
+                                </button>
+                            </div>
+                            <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-xs">
+                                Includes 90-Day Money-Back Guarantee
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                {/* Pricing Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                    {plans.map((plan) => {
-                        const Icon = plan.icon;
-                        const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;
-                        const savings = plan.id !== 'free' ? PaymentService.calculateYearlySavings(plan.id) : 0;
+                    {/* Pricing Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
+                        {plans.map((plan) => {
+                            const Icon = plan.icon;
+                            const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;
 
-                        return (
-                            <div
-                                key={plan.id}
-                                className={`relative bg-gray-900/50 backdrop-blur-xl border ${plan.popular ? 'border-blue-500 shadow-2xl shadow-blue-500/20' : 'border-gray-800'
-                                    } rounded-3xl p-8 flex flex-col transition-all hover:scale-105`}
-                            >
-                                {plan.popular && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-wider">
-                                        Most Popular
+                            return (
+                                <div
+                                    key={plan.id}
+                                    className={`relative bg-gray-900 border ${plan.popular ? 'border-blue-500 shadow-2xl shadow-blue-500/20 scale-105' : 'border-white/5'
+                                        } rounded-[32px] p-8 flex flex-col transition-all hover:-translate-y-2 group`}
+                                >
+                                    {plan.popular && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
+                                            Recommended
+                                        </div>
+                                    )}
+
+                                    <div className={`w-12 h-12 bg-gradient-to-br ${plan.color} rounded-2xl flex items-center justify-center mb-6 shadow-lg`}>
+                                        <Icon className="h-6 w-6 text-white" />
                                     </div>
-                                )}
 
-                                <div className={`w-14 h-14 bg-gradient-to-br ${plan.color} rounded-2xl flex items-center justify-center mb-4`}>
-                                    <Icon className="h-7 w-7 text-white" />
-                                </div>
+                                    <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">{plan.name}</h3>
+                                    <p className="text-gray-500 text-xs font-bold leading-relaxed mb-6 uppercase tracking-wider">{plan.description}</p>
 
-                                <h3 className="text-2xl font-black text-white mb-2">{plan.name}</h3>
-                                <p className="text-gray-400 text-sm mb-6">{plan.description}</p>
-
-                                <div className="mb-6">
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-5xl font-black text-white">${price}</span>
-                                        <span className="text-gray-500">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                                    <div className="mb-8">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-5xl font-black text-white">${price}</span>
+                                            <span className="text-gray-600 font-black uppercase text-xs tracking-widest">
+                                                /{billingCycle === 'monthly' ? 'mo' : 'yr'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    {billingCycle === 'yearly' && savings > 0 && (
-                                        <p className="text-green-400 text-sm font-bold mt-2">Save ${savings}/year</p>
+
+                                    <ul className="space-y-4 mb-8 flex-1">
+                                        {plan.features.map((feature, idx) => (
+                                            <li key={idx} className="flex items-start gap-3 text-gray-400 text-xs font-bold leading-relaxed">
+                                                <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                                                <span className="uppercase tracking-wide">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    {selectedPlan?.id === plan.id && plan.id !== 'free' ? (
+                                        <div className="mt-auto space-y-4">
+                                            <PayPalButtons
+                                                style={{ layout: "vertical", shape: "rect", label: "subscribe" }}
+                                                createSubscription={(data: any, actions: any) => {
+                                                    const planPromise = PaymentService.getPlans().then(availablePlans => {
+                                                        const p = availablePlans.find(planItem => planItem.tier_id === plan.id);
+                                                        return billingCycle === 'monthly' ? p?.paypal_plan_id_monthly : p?.paypal_plan_id_yearly;
+                                                    });
+
+                                                    return planPromise.then(id => {
+                                                        if (!id) throw new Error("Plan ID not found");
+                                                        return actions.subscription.create({
+                                                            'plan_id': id
+                                                        });
+                                                    });
+                                                }}
+                                                onApprove={async (data: any, actions: any) => {
+                                                    await handleSubscriptionSuccess(data);
+                                                }}
+                                            />
+                                            <button
+                                                onClick={() => setSelectedPlan(null)}
+                                                className="w-full text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-widest text-center transition-colors"
+                                            >
+                                                Switch Plan
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleSelectPlan(plan.id)}
+                                            className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all mt-auto ${plan.popular
+                                                ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/20'
+                                                : 'bg-gray-800 text-white hover:bg-gray-700'
+                                                }`}
+                                        >
+                                            {plan.cta}
+                                        </button>
                                     )}
                                 </div>
+                            );
+                        })}
+                    </div>
 
-                                <ul className="space-y-3 mb-8 flex-1">
-                                    {plan.features.map((feature, idx) => (
-                                        <li key={idx} className="flex items-start gap-3 text-gray-300 text-sm">
-                                            <Check className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                    {/* Trust Signals Section */}
+                    <div className="bg-gray-900 border border-gray-800 rounded-[48px] p-8 md:p-16 mb-24 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/5 blur-[80px] rounded-full"></div>
 
-                                {selectedPlan?.id === plan.id && plan.id !== 'free' ? (
-                                    <div className="mt-auto pt-6">
-                                        <PayPalButtons
-                                            style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
-                                            createSubscription={(data: any, actions: any) => {
-                                                const planIds = PaymentService.getPlans().then(plans => {
-                                                    const p = plans.find(p => p.tier_id === plan.id);
-                                                    return billingCycle === 'monthly' ? p?.paypal_plan_id_monthly : p?.paypal_plan_id_yearly;
-                                                });
-
-                                                return planIds.then(id => {
-                                                    if (!id) throw new Error("Plan ID not found");
-                                                    return actions.subscription.create({
-                                                        'plan_id': id
-                                                    });
-                                                });
-                                            }}
-                                            onApprove={async (data: any, actions: any) => {
-                                                await handleSubscriptionSuccess(data);
-                                            }}
-                                        />
-                                        <button
-                                            onClick={() => setSelectedPlan(null)}
-                                            className="w-full mt-2 text-xs text-gray-500 hover:text-white transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center relative z-10">
+                            <div>
+                                <h3 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-6">
+                                    The "No-Friction" <br /> ArtScaler Guarantee
+                                </h3>
+                                <p className="text-gray-400 font-bold mb-8 leading-relaxed">
+                                    We're so confident ArtScaler will pay for itself within your first month that we offer an industry-leading 90-day guarantee.
+                                    If you don't spot high-profit opportunities, get a full refund. No questions asked.
+                                </p>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div>
+                                        <p className="text-3xl font-black text-white mb-2">90%+</p>
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Accuracy Lead</p>
                                     </div>
-                                ) : (
-                                    <button
-                                        onClick={() => handleSelectPlan(plan.id)}
-                                        className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all mt-auto ${plan.popular
-                                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-2xl hover:shadow-blue-500/50'
-                                            : 'bg-gray-800 text-white hover:bg-gray-700'
-                                            }`}
-                                    >
-                                        {plan.cta}
-                                    </button>
-                                )}
+                                    <div>
+                                        <p className="text-3xl font-black text-white mb-2">24/7</p>
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Market Monitoring</p>
+                                    </div>
+                                </div>
                             </div>
-                        );
-                    })}
-                </div>
+                            <div className="bg-gray-800/50 border border-white/5 rounded-[32px] p-8 space-y-6">
+                                <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4">Enterprise-Grade Security</h4>
+                                {[
+                                    "Bank-level data encryption",
+                                    "Official eBay API verification",
+                                    "Secured PayPal checkout",
+                                    "No hidden fees or contracts"
+                                ].map(item => (
+                                    <div key={item} className="flex items-center gap-4 text-xs font-bold text-gray-300 uppercase tracking-wide">
+                                        <Check className="h-4 w-4 text-blue-500" />
+                                        {item}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
 
-                {/* FAQ Section */}
-                <div className="mt-16 text-center">
-                    <h3 className="text-2xl font-bold text-white mb-8">Frequently Asked Questions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-6">
-                            <h4 className="font-bold text-white mb-2">Can I deactivate my subscription?</h4>
-                            <p className="text-gray-400 text-sm">Yes! You can cancel anytime from your settings page.</p>
-                        </div>
-                        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-6">
-                            <h4 className="font-bold text-white mb-2">What payment methods do you accept?</h4>
-                            <p className="text-gray-400 text-sm">We securely process all payments via PayPal.</p>
-                        </div>
-                        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-6">
-                            <h4 className="font-bold text-white mb-2">Is there a free trial?</h4>
-                            <p className="text-gray-400 text-sm">The Free Scout plan is available forever. No credit card required.</p>
-                        </div>
-                        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-6">
-                            <h4 className="font-bold text-white mb-2">Can I cancel anytime?</h4>
-                            <p className="text-gray-400 text-sm">Absolutely. Cancel with one click in your PayPal dashboard or settings.</p>
-                        </div>
+                    {/* Simple FAQ */}
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        <h4 className="text-center text-xl font-black text-white uppercase italic tracking-tighter mb-12">Intelligence FAQ</h4>
+                        {[
+                            { q: "Can I cancel anytime?", a: "Yes, you have full control. One-click cancellation from your dashboard." },
+                            { q: "What is WVS Scoring?", a: "Watch Velocity Score is our proprietary AI signal that measures real buyer demand." },
+                            { q: "Does this include international eBay data?", a: "Currently we support eBay US, with UK and EU coming in Q1 2026." }
+                        ].map((faq, idx) => (
+                            <div key={idx} className="bg-gray-900 border border-white/5 rounded-2xl p-6">
+                                <h5 className="text-sm font-black text-white uppercase tracking-wider mb-2">{faq.q}</h5>
+                                <p className="text-xs font-bold text-gray-500 leading-relaxed uppercase tracking-wide">{faq.a}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

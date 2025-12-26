@@ -12,10 +12,9 @@ import {
     Sparkles,
     TrendingUp,
     AlertCircle,
-    ChevronRight,
     CheckCircle2
 } from 'lucide-react';
-import { DEMO_PLANNER_RECS, getDemoBadge } from '@/lib/demo-data';
+import { DEMO_PLANNER_RECS } from '@/lib/demo-data';
 
 interface Recommendation {
     id: string;
@@ -34,7 +33,6 @@ export default function ArtPlanner() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState<string | null>(null);
     const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
-    const [isDemo, setIsDemo] = useState(false);
 
     useEffect(() => {
         loadRecommendations();
@@ -42,15 +40,12 @@ export default function ArtPlanner() {
 
     const loadRecommendations = async () => {
         setIsLoading(true);
-        setIsDemo(false);
         try {
             const res = await fetch('/api/art-planner');
             const data = await res.json();
             if (data.success && data.recommendations.length > 0) {
                 setRecommendations(data.recommendations);
-                setIsDemo(false);
             } else {
-                // UX Synergy Logic: Tailor planner based on preferences
                 let preferredStyles: string[] = [];
                 if (typeof window !== 'undefined') {
                     const saved = localStorage.getItem('artscaler_pref_styles');
@@ -69,7 +64,6 @@ export default function ArtPlanner() {
                     date: new Date().toLocaleDateString()
                 }));
 
-                // Sort by preference (e.g., if subject contains a preferred keyword)
                 const sorted = [...mapped].sort((a, b) => {
                     const aMatch = preferredStyles.some(s => a.subject.toLowerCase().includes(s.toLowerCase().replace('_', ' ')));
                     const bMatch = preferredStyles.some(s => b.subject.toLowerCase().includes(s.toLowerCase().replace('_', ' ')));
@@ -79,11 +73,8 @@ export default function ArtPlanner() {
                 });
 
                 setRecommendations(sorted as any);
-                setIsDemo(true);
             }
         } catch (err) {
-            console.error('Error loading recommendations:', err);
-            setIsDemo(true);
         } finally {
             setIsLoading(false);
         }
@@ -110,16 +101,15 @@ export default function ArtPlanner() {
                 setAddedIds(prev => new Set(prev).add(rec.id));
             }
         } catch (err) {
-            console.error('Error adding to queue:', err);
         } finally {
             setIsAdding(null);
         }
     };
 
     const getWvsColor = (score: number) => {
-        if (score >= 7) return 'text-orange-500';
-        if (score >= 4) return 'text-yellow-500';
-        return 'text-blue-500';
+        if (score >= 7) return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
+        if (score >= 4) return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
+        return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
     };
 
     const getWvsLabel = (score: number) => {
@@ -130,171 +120,126 @@ export default function ArtPlanner() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-12">
+                {/* V6 Title Row */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 py-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Art Planner</h1>
-                        <p className="text-gray-400">Weekly recommendations powered by ArtScaler Intelligence</p>
-                        {isDemo && (
-                            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500">
-                                <AlertCircle className="h-4 w-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">{getDemoBadge('Art Planner')}</span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Niche Intelligence</span>
+                        </div>
+                        <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase leading-[0.9]">
+                            Art Strategy <br />
+                            <span className="text-gray-700">Builder</span>
+                        </h1>
                     </div>
-                    <button
-                        onClick={() => {
-                            setIsLoading(true);
-                            loadRecommendations();
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all border border-gray-700"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                        Refresh Plan
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => {
+                                setIsLoading(true);
+                                loadRecommendations();
+                            }}
+                            className="flex items-center gap-2 px-6 py-4 bg-gray-900 hover:bg-gray-800 text-gray-400 hover:text-white rounded-2xl transition-all border border-white/5 font-black uppercase tracking-widest text-xs"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh Strategy
+                        </button>
+                    </div>
                 </div>
 
                 {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-gray-900/50 border border-gray-800 rounded-2xl h-80 animate-pulse" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="bg-gray-900/50 border border-white/5 rounded-[32px] h-[400px] animate-pulse" />
                         ))}
-                    </div>
-                ) : recommendations.length === 0 ? (
-                    <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-12 text-center">
-                        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Calendar className="h-8 w-8 text-blue-500" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">Analyzing Marketplace...</h2>
-                        <p className="text-gray-400 max-w-md mx-auto mb-8">
-                            We're still processing the latest eBay data for your niche. Your weekly plan will appear here shortly.
-                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {recommendations.map((rec) => (
                             <div
                                 key={rec.id}
-                                className="group bg-gray-900/40 backdrop-blur-sm border border-gray-800 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300 flex flex-col"
+                                className="group bg-gray-900 border border-white/5 rounded-[40px] p-8 flex flex-col transition-all hover:-translate-y-2 hover:border-blue-500/30 overflow-hidden relative"
                             >
-                                {/* Header */}
-                                <div className="p-6 border-b border-gray-800/50 bg-gradient-to-br from-gray-900 to-gray-900/40">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-xs font-bold uppercase tracking-wider ${getWvsColor(rec.wvs)}`}>
-                                            <Zap className="h-3 w-3 fill-current" />
-                                            {getWvsLabel(rec.wvs)}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                            <Sparkles className="h-3 w-3 text-purple-400" />
-                                            {Math.round(rec.confidence * 100)}% Match
-                                        </div>
+                                {/* Decorative Gradient */}
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl rounded-full group-hover:bg-blue-600/10 transition-colors"></div>
+
+                                <div className="flex items-center justify-between mb-8 relative z-10">
+                                    <div className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${getWvsColor(rec.wvs)}`}>
+                                        <Zap className="h-3 w-3 fill-current" />
+                                        {getWvsLabel(rec.wvs)}
                                     </div>
-                                    <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">
+                                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                        WVS {rec.wvs.toFixed(1)}
+                                    </div>
+                                </div>
+
+                                <div className="mb-6 relative z-10">
+                                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-1 group-hover:text-blue-500 transition-colors">
                                         {rec.subject}
                                     </h3>
-                                    <p className="text-sm text-gray-400">Targeting {rec.recommendedSizes[0]} collectors</p>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Confidence: {Math.round(rec.confidence * 100)}%</p>
                                 </div>
 
-                                {/* Stats */}
-                                <div className="p-6 space-y-4 flex-1">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <span className="text-xs text-gray-500 uppercase font-semibold">Pulse Velocity</span>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
-                                                        style={{ width: `${Math.min(rec.wvs * 10, 100)}%` }}
-                                                    />
-                                                </div>
-                                                <span className="text-sm font-bold text-white">{rec.wvs.toFixed(1)}</span>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="text-xs text-gray-500 uppercase font-semibold">Target Price</span>
-                                            <div className="flex items-center gap-1 text-green-400 font-bold">
-                                                <DollarSign className="h-4 w-4" />
-                                                <span className="text-lg">${rec.targetPrice}</span>
-                                            </div>
+                                <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Target Price</p>
+                                        <div className="flex items-center gap-1 text-green-500 font-black text-xl italic">
+                                            <span className="text-xs non-italic">$</span>
+                                            {rec.targetPrice}
                                         </div>
                                     </div>
-
-                                    <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-800">
-                                        <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
-                                            <Maximize2 className="h-4 w-4 text-purple-400" />
-                                            <span className="font-semibold">Optimal Sizes:</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {rec.recommendedSizes.map(size => (
-                                                <span key={size} className="px-2 py-1 bg-gray-800 text-xs text-white rounded border border-gray-700">
-                                                    {size}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-3 bg-blue-500/5 p-3 rounded-lg border border-blue-500/10">
-                                        <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                                        <p className="text-xs text-blue-300/80 leading-relaxed">
-                                            Market data shows high scarcity for {rec.subject} in {rec.recommendedSizes[0]}. Potential to exceed target price by 15%.
-                                        </p>
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Optimal Size</p>
+                                        <div className="text-sm font-black text-white uppercase mt-1.5">{rec.recommendedSizes[0]}</div>
                                     </div>
                                 </div>
 
-                                {/* Action */}
-                                <div className="p-6 pt-0">
-                                    <button
-                                        onClick={() => addToQueue(rec)}
-                                        disabled={isAdding === rec.id || addedIds.has(rec.id)}
-                                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all duration-300 ${addedIds.has(rec.id)
-                                            ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-default'
-                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30'
-                                            }`}
-                                    >
-                                        {isAdding === rec.id ? (
-                                            <RefreshCw className="h-5 w-5 animate-spin" />
-                                        ) : addedIds.has(rec.id) ? (
-                                            <>
-                                                <CheckCircle2 className="h-5 w-5" />
-                                                Added to Queue
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Plus className="h-5 w-5" />
-                                                Add to Paint Queue
-                                            </>
-                                        )}
-                                    </button>
+                                <div className="mb-8 p-4 bg-blue-600/5 border border-blue-600/10 rounded-2xl relative z-10">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertCircle className="h-3 w-3 text-blue-500" />
+                                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Market Recommendation</p>
+                                    </div>
+                                    <p className="text-xs font-bold text-gray-300 leading-relaxed uppercase">
+                                        Create 2-3 pieces with <span className="text-white">vibrant textures</span> to minimize competition and maximize conversion.
+                                    </p>
                                 </div>
+
+                                <button
+                                    onClick={() => addToQueue(rec)}
+                                    disabled={isAdding === rec.id || addedIds.has(rec.id)}
+                                    className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all relative z-10 mt-auto ${addedIds.has(rec.id)
+                                        ? 'bg-green-600/10 text-green-500 border border-green-500/20'
+                                        : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/20'
+                                        }`}
+                                >
+                                    {isAdding === rec.id ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
+                                    ) : addedIds.has(rec.id) ? (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            <span>In Production</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Plus className="h-4 w-4" />
+                                            <span>Add to Queue</span>
+                                        </div>
+                                    )}
+                                </button>
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* Legend or Guide */}
-                <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8">
-                    <div className="flex-1">
-                        <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-blue-500" />
-                            How to use your Weekly Plan
-                        </h4>
-                        <p className="text-sm text-gray-400 leading-relaxed">
-                            Recommendations are ranked by <strong>Pulse Velocity (WVS)</strong>. Focus on "Hot Pulse" items for maximum turnover, and "Steady Velocity" items for consistent baseline revenue.
-                        </p>
+                {/* Legend Guide */}
+                <div className="bg-gray-900 border border-white/5 rounded-[40px] p-10 flex flex-col md:flex-row items-center gap-10">
+                    <div className="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center shrink-0">
+                        <TrendingUp className="h-8 w-8 text-blue-500" />
                     </div>
-                    <div className="flex items-center gap-4 text-sm font-semibold text-gray-400">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-orange-500" />
-                            High Demand
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                            Good Demand
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-blue-500" />
-                            Moderate
-                        </div>
+                    <div>
+                        <h4 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Intelligence Guide</h4>
+                        <p className="text-xs font-bold text-gray-500 uppercase leading-relaxed tracking-wider">
+                            Recommendations are calibrated using <span className="text-white">Global Market Pulse</span> data. "Hot Pulse" items represent the highest search-to-sale ratio in the current 24-hour cycle. Focus your production on these topics to maximize inventory turnover.
+                        </p>
                     </div>
                 </div>
             </div>
