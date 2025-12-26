@@ -13,6 +13,8 @@ interface ArtCardProps {
         sold_date: string;
         image_url: string;
         item_url: string;
+        watchers?: number;
+        bids?: number;
         visual_metadata?: {
             colors: string[];
             primary_style: string;
@@ -42,11 +44,20 @@ export default function ArtCard({ listing, onQuickView }: ArtCardProps) {
                 </div>
             </div>
 
-            {/* Sold Date Badge */}
-            <div className="absolute top-3 left-3 z-10">
+            {/* Live Pulse Signals */}
+            <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
                 <div className="bg-black/60 backdrop-blur-md text-gray-200 text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-widest">
                     Sold {new Date(listing.sold_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </div>
+
+                {((listing.watchers || 0) > 0 || (listing.bids || 0) > 0) && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg shadow-lg animate-in fade-in slide-in-from-left duration-500">
+                        <TrendingUp className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                        <span className="text-[10px] md:text-xs font-black uppercase tracking-wide">
+                            {(listing.watchers || 0) > 0 ? `${listing.watchers} Watching` : `${listing.bids} Bids`}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Image Container */}

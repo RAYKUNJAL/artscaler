@@ -57,6 +57,8 @@ export default function ArtGalleryGrid({
                     sold_date: new Date().toISOString(),
                     image_url: item.image_url,
                     item_url: item.item_url,
+                    watchers: item.watchers,
+                    bids: item.bids,
                     visual_metadata: {
                         primary_style: item.style,
                         colors: ['#2563eb', '#7c3aed'],
@@ -88,6 +90,8 @@ export default function ArtGalleryGrid({
                 sold_date: new Date().toISOString(),
                 image_url: item.image_url,
                 item_url: item.item_url,
+                watchers: item.watchers,
+                bids: item.bids,
                 visual_metadata: {
                     primary_style: item.style,
                     colors: ['#2563eb', '#7c3aed'],
