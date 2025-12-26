@@ -22,7 +22,7 @@ export default function Hero() {
 
                 <h1 className="text-6xl md:text-8xl font-black text-white mb-6 leading-tight tracking-tighter animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
                     Grow your eBay art sales <br className="hidden md:block" />
-                    <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-blue-300 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow-sm">
                         with data, not guesses
                     </span>
                 </h1>

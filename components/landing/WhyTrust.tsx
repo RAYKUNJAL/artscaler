@@ -42,8 +42,8 @@ export default function WhyTrust() {
                             {/* Accent Glow */}
                             <div className={`absolute top-0 right-0 w-32 h-32 bg-${card.color}-500/10 blur-[60px] rounded-full group-hover:bg-${card.color}-500/20 transition-all`}></div>
 
-                            <div className={`w-16 h-16 bg-${card.color}-500/10 border border-${card.color}-500/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500`}>
-                                <card.icon className={`h-8 w-8 text-${card.color}-500`} />
+                            <div className={`w-16 h-16 bg-${card.color}-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-${card.color}-500/40 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500`}>
+                                <card.icon className={`h-8 w-8 text-${card.color}-400`} />
                             </div>
 
                             <h3 className="text-2xl font-black text-white mb-4 tracking-tight">

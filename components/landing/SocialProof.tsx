@@ -23,7 +23,7 @@ export default function SocialProof() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border-[1px] border-white/5 rounded-full pointer-events-none"></div>
 
             <div className="container mx-auto px-4 relative">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center mb-24">
                     {/* Founder Note */}
                     <div className="space-y-8">
                         <h2 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter uppercase italic">
@@ -61,6 +61,43 @@ export default function SocialProof() {
                             </div>
                         ))}
                     </div>
+                </div>
+
+                {/* Additional Testimonials */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[
+                        {
+                            name: "Sarah Jenkins",
+                            role: "Oil Painter",
+                            content: "ArtScaler completely changed how I list. I used to guess my prices, but now I have the data to back up $500+ listings with confidence.",
+                            avatar: "SJ"
+                        },
+                        {
+                            name: "Marcus Thorne",
+                            role: "Digital Artist",
+                            content: "The 'Pulse Velocity' signal is real. I saw Minecraft portraits were trending, listed 5, and sold 3 in the first week. Insane.",
+                            avatar: "MT"
+                        },
+                        {
+                            name: "Elena Ross",
+                            role: "Mixed Media",
+                            content: "Finally a tool that understands the art market. The 90-day guarantee made it a no-brainer, and I'll never go back to generic research.",
+                            avatar: "ER"
+                        }
+                    ].map((testimonial, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 p-8 rounded-3xl hover:bg-white/10 transition-all">
+                            <p className="text-gray-300 italic mb-6">"{testimonial.content}"</p>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                                    {testimonial.avatar}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-white">{testimonial.name}</p>
+                                    <p className="text-xs text-blue-400">{testimonial.role}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </section>

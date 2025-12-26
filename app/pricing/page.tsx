@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Check, Zap, Crown, Rocket, Star, Eye, Palette } from 'lucide-react';
+import Header from '@/components/layout/Header';
 import { PaymentService, type BillingCycle } from '@/lib/payments/payment-service';
 import { createClient } from '@/lib/supabase/client';
 import { PayPalButtons } from "@paypal/react-paypal-js";
@@ -115,14 +116,18 @@ export default function PricingPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 py-20 px-4">
-            <div className="max-w-7xl mx-auto">
+            <Header />
+            <div className="max-w-7xl mx-auto pt-16">
                 {/* Header */}
                 <div className="text-center mb-16">
                     <h1 className="text-5xl font-black text-white mb-4">
                         Choose Your <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Pulse Plan</span>
                     </h1>
-                    <p className="text-xl text-gray-300 mb-8">
+                    <p className="text-xl text-gray-300 mb-2">
                         Scale your eBay art business with real-time demand intelligence
+                    </p>
+                    <p className="text-blue-400 font-black uppercase tracking-widest text-xs mb-8">
+                        Includes 90-Day Money-Back Guarantee
                     </p>
 
                     {/* Billing Toggle */}
