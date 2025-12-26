@@ -5,6 +5,7 @@ import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RecentScrapes from '@/components/RecentScrapes';
 import ArtGalleryGrid from '@/components/gallery/ArtGalleryGrid';
+import UsageMeter from '@/components/dashboard/UsageMeter';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
     TrendingUp,
@@ -27,6 +28,7 @@ interface DashboardStats {
     avgPrice: number;
     pulseAlerts: number;
     estimatedMarketCap: number;
+    dailyUsage?: { used: number; limit: number };
 }
 
 export default function Dashboard() {
@@ -64,6 +66,7 @@ export default function Dashboard() {
                     avgPrice: data.stats.marketValue / (data.stats.activeListings || 1),
                     pulseAlerts: data.stats.activeAlerts || 0,
                     estimatedMarketCap: data.stats.marketValue || 0,
+                    dailyUsage: data.stats.dailyUsage,
                 });
             } else {
                 console.error('Failed to load stats:', data.error);
@@ -147,16 +150,10 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 md:p-6 hover:border-emerald-500/30 transition-all group">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest">Market Value</h3>
-                            <DollarSign className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-3xl md:text-4xl font-black text-white">${((stats.estimatedMarketCap ?? 0) / 1000).toFixed(1)}k</p>
-                            <p className="text-xs text-gray-400 font-medium">Under Monitoring</p>
-                        </div>
-                    </div>
+                    <UsageMeter
+                        used={stats.dailyUsage?.used || 0}
+                        limit={stats.dailyUsage?.limit || 10}
+                    />
                 </div>
 
                 {/* Secondary Actions */}
@@ -213,7 +210,7 @@ export default function Dashboard() {
                                     </div>
                                 ) : (
                                     stats.topStyles.map((item, index) => (
-                                        <div key={item.style} className="space-y-2">
+                                        <div key={`${item.style}-${index}`} className="space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-xs md:text-sm font-black text-gray-600">0{index + 1}</span>
@@ -226,10 +223,8 @@ export default function Dashboard() {
                                             <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500"
-                                                    style={{ '--bar-width': `${Math.min((item.avgWvs / 10) * 100, 100)}%` } as React.CSSProperties}
-                                                >
-                                                    <div className="h-full w-[var(--bar-width)]" />
-                                                </div>
+                                                    style={{ width: `${Math.min(((item.avgWvs || 0) / 10) * 100, 100)}%` }}
+                                                />
                                             </div>
                                         </div>
                                     ))

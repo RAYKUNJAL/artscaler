@@ -8,9 +8,7 @@
  * - Thank you card copy generation
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+import { generateResponse } from '@/lib/ai/vertexClient';
 
 export interface BrandIdentity {
     artistName: string;
@@ -45,8 +43,6 @@ export class GeminiAIService {
         medium: string; // e.g., "oil painting", "watercolor", "acrylic"
         targetAudience?: string;
     }): Promise<BrandIdentity> {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const prompt = `You are a professional brand strategist for artists. Create a complete brand identity for an artist with the following details:
 
 Artist Name: ${params.artistName}
@@ -78,9 +74,7 @@ Return ONLY valid JSON in this exact format:
 }`;
 
         try {
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const text = await generateResponse(prompt);
 
             // Extract JSON from response
             const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -129,8 +123,6 @@ Return ONLY valid JSON in this exact format:
         artistName: string;
         tone?: 'formal' | 'casual' | 'warm';
     }): Promise<ThankYouCardCopy> {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const prompt = `Write a heartfelt thank you card message for an art buyer.
 
 Buyer Name: ${params.buyerName}
@@ -153,9 +145,7 @@ Return ONLY valid JSON:
 }`;
 
         try {
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const text = await generateResponse(prompt);
 
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (!jsonMatch) {
@@ -184,8 +174,6 @@ Return ONLY valid JSON:
         artistName: string,
         personalNote?: string
     ): Promise<string> {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const prompt = `Write a warm, heartfelt thank you message for an art buyer.
 
 Buyer Name: ${buyerName}
@@ -202,9 +190,7 @@ ${personalNote ? '4. Incorporates the personal note naturally' : ''}
 Write in a warm, genuine tone. Return ONLY the message text, no JSON, no formatting.`;
 
         try {
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            return response.text().trim();
+            return await generateResponse(prompt);
         } catch (error) {
             console.error('[Gemini AI] Thank you message error:', error);
 
@@ -216,18 +202,13 @@ Write in a warm, genuine tone. Return ONLY the message text, no JSON, no formatt
      * Extract color palette from artwork image
      */
     static async extractColorPalette(imageUrl: string): Promise<string[]> {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const prompt = `Analyze this artwork and extract the 5 most dominant colors. Return ONLY a JSON array of hex color codes.
 
 Example: ["#ff5733", "#33ff57", "#3357ff", "#f0f0f0", "#333333"]`;
 
         try {
-            // Note: Gemini Pro Vision requires image data
-            // This is a placeholder - you'd need to fetch and convert the image
-            const result = await model.generateContent([prompt]);
-            const response = result.response;
-            const text = response.text();
+            // Note: Vertex AI REST also works here
+            const text = await generateResponse(prompt);
 
             const jsonMatch = text.match(/\[[\s\S]*\]/);
             if (!jsonMatch) {
@@ -253,8 +234,6 @@ Example: ["#ff5733", "#33ff57", "#3357ff", "#f0f0f0", "#333333"]`;
         style: string;
         colors?: string[];
     }): Promise<string> {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const colorText = params.colors?.length
             ? `featuring ${params.colors.join(', ')} tones`
             : '';
@@ -276,9 +255,7 @@ Write a 3-4 sentence description that:
 Keep it professional but engaging. Do NOT use markdown or special formatting.`;
 
         try {
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            return response.text().trim();
+            return await generateResponse(prompt);
         } catch (error) {
             console.error('[Gemini AI] Description generation error:', error);
 
@@ -290,16 +267,12 @@ Keep it professional but engaging. Do NOT use markdown or special formatting.`;
      * Generate care instructions for artwork
      */
     static async generateCareInstructions(medium: string): Promise<string[]> {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const prompt = `Generate 5 care instructions for preserving ${medium} artwork. Return as a JSON array of strings.
 
 Example: ["Keep away from direct sunlight", "Dust gently with a soft cloth", ...]`;
 
         try {
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const text = await generateResponse(prompt);
 
             const jsonMatch = text.match(/\[[\s\S]*\]/);
             if (!jsonMatch) {

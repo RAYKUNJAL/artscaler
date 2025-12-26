@@ -26,6 +26,7 @@ export interface EbayListing {
 export class EbayApiClient {
     private environment: string;
     private baseUrl: string;
+    private browseBaseUrl: string;
     private cache = new Map<string, { data: EbayListing[], timestamp: number }>();
     private CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
@@ -34,6 +35,9 @@ export class EbayApiClient {
         this.baseUrl = this.environment === 'PRODUCTION'
             ? 'https://svcs.ebay.com/services/search/FindingService/v1'
             : 'https://svcs.sandbox.ebay.com/services/search/FindingService/v1';
+        this.browseBaseUrl = this.environment === 'PRODUCTION'
+            ? 'https://api.ebay.com/buy/browse/v1'
+            : 'https://api.sandbox.ebay.com/buy/browse/v1';
     }
 
     private getCached(key: string): EbayListing[] | null {
@@ -51,13 +55,16 @@ export class EbayApiClient {
     /**
      * Search for completed (sold) items
      */
-    async findCompletedItems(keyword: string, limit: number = 100): Promise<EbayListing[]> {
+    async findCompletedItems(userId: string, keyword: string, limit: number = 100): Promise<EbayListing[]> {
         const cacheKey = `sold:${keyword}:${limit}`;
         const cached = this.getCached(cacheKey);
         if (cached) {
             console.log(`[eBay API] Returning cached results for SOLD: ${keyword}`);
             return cached;
         }
+
+        // Check per-user daily limit
+        const { searches_count, searches_limit } = await this.enforceUserLimit(userId);
 
         const rateStatus = await checkRateLimit();
         if (rateStatus.isBlocked) {
@@ -114,13 +121,16 @@ export class EbayApiClient {
     /**
      * Search for active items
      */
-    async findActiveItems(keyword: string, limit: number = 20): Promise<EbayListing[]> {
+    async findActiveItems(userId: string, keyword: string, limit: number = 20): Promise<EbayListing[]> {
         const cacheKey = `active:${keyword}:${limit}`;
         const cached = this.getCached(cacheKey);
         if (cached) {
             console.log(`[eBay API] Returning cached results for ACTIVE: ${keyword}`);
             return cached;
         }
+
+        // Check per-user daily limit
+        await this.enforceUserLimit(userId);
 
         return withRetry(async () => {
             const token = await getEbayAccessToken();
@@ -162,6 +172,86 @@ export class EbayApiClient {
             this.setCached(cacheKey, parsed);
             return parsed;
         });
+    }
+
+    /**
+     * Search using Browse API (Official modern method)
+     */
+    async browseMarket(userId: string, keyword: string, limit: number = 20): Promise<EbayListing[]> {
+        const cacheKey = `browse:${keyword}:${limit}`;
+        const cached = this.getCached(cacheKey);
+        if (cached) return cached;
+
+        await this.enforceUserLimit(userId);
+
+        return withRetry(async () => {
+            const token = await getEbayAccessToken();
+
+            const url = `${this.browseBaseUrl}/item_summary/search?q=${encodeURIComponent(keyword)}&limit=${limit}`;
+
+            console.log(`[eBay Browse API] Fetching: ${url}`);
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                console.error(`[eBay Browse API] Error ${response.status}:`, errorData);
+                throw new Error(`Browse API error: ${response.status} - ${errorData}`);
+            }
+
+            const data = await response.json();
+            const items = data.itemSummaries || [];
+
+            const parsed = items.map((item: any) => {
+                const normalizedUrl = item.itemWebUrl && item.itemWebUrl.startsWith('http')
+                    ? item.itemWebUrl
+                    : `https://www.ebay.com/itm/${item.itemId}`;
+                return {
+                    itemId: item.itemId,
+                    title: item.title,
+                    soldPrice: parseFloat(item.price?.value || '0'),
+                    shippingPrice: parseFloat(item.shippingOptions?.[0]?.shippingCost?.value || '0'),
+                    currency: item.price?.currency || 'USD',
+                    itemUrl: normalizedUrl,
+                    imageUrl: item.image?.imageUrl,
+                    bidCount: item.bidCount || 0,
+                    watcherCount: 0, // Browse API summary doesn't always have this
+                    listingType: item.buyingOptions?.[0]
+                };
+            });
+
+            this.setCached(cacheKey, parsed);
+            return parsed;
+        });
+    }
+
+    private async enforceUserLimit(userId: string): Promise<{ searches_count: number; searches_limit: number }> {
+        const { createServerClient } = require('@/lib/supabase/server');
+        const supabase = await createServerClient();
+
+        const { data, error } = await supabase.rpc('check_and_increment_daily_limit', {
+            p_user_id: userId,
+            p_increment: 0 // Check only here, increment happens in the API route
+        });
+
+        if (error) {
+            console.error('[eBay API] Limit check error:', error);
+            // Fallback: allow if error (don't block user due to DB issues)
+            return { searches_count: 0, searches_limit: 999 };
+        }
+
+        const result = data[0];
+        if (result && !result.allowed) {
+            throw new Error(`Daily search limit reached (${result.current_limit}). Please upgrade your plan for more searches.`);
+        }
+
+        return result || { searches_count: 0, searches_limit: 10 };
     }
 
     private parseFindingResponse(data: any, rootKey: string): EbayListing[] {

@@ -4,21 +4,27 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { Check, Loader2, Sparkles, Target, Search, Rocket } from 'lucide-react';
+import { Check, Loader2, Sparkles, LayoutGrid, Maximize, Search, ArrowRight } from 'lucide-react';
 
-const ART_CATEGORIES = [
-    'Canvas Art',
-    'Street Art',
-    'Vintage Prints',
-    'Photography',
-    'Contemporary',
-    'Pop Culture',
-    'Stencil & Airbrush',
-    'Hand-Signed',
-    'Limited Edition',
-    'Abstract',
-    'Minimalist',
-    'Mixed Media',
+const STYLE_OPTIONS = [
+    { value: "abstract", label: "Abstract", icon: "🎨" },
+    { value: "landscape", label: "Landscape", icon: "🏞️" },
+    { value: "portrait", label: "Portrait", icon: "👤" },
+    { value: "pop_art", label: "Pop Art/Fan Art", icon: "🚀" },
+    { value: "surrealism", label: "Surrealism", icon: "👁️" },
+    { value: "impressionism", label: "Impressionism", icon: "🌸" },
+    { value: "mixed_media", label: "Mixed Media", icon: "🧵" },
+    { value: "still_life", label: "Still Life", icon: "🍎" },
+    { value: "animal", label: "Animal Art", icon: "🐾" },
+    { value: "urban", label: "Urban/Cityscape", icon: "🏙️" },
+    { value: "other", label: "Other", icon: "✨" }
+];
+
+const SIZE_OPTIONS = [
+    { value: "small", label: "Small (8×10 to 11×14)" },
+    { value: "medium", label: "Medium (16×20 to 18×24)" },
+    { value: "large", label: "Large (24×30 to 36×48)" },
+    { value: "varied", label: "Varies" }
 ];
 
 export default function OnboardingPage() {
@@ -27,316 +33,200 @@ export default function OnboardingPage() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
 
-    // Redirect to signup if not logged in
+    // Preferences
+    const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+    const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
     useEffect(() => {
         if (!authLoading && !user) {
-            console.log('No user found in onboarding, redirecting to signup');
             router.push('/auth/signup');
         }
     }, [user, authLoading, router]);
 
-    // Step 2: Art categories
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-
-    // Step 3: Initial keywords
-    const [keywords, setKeywords] = useState<string[]>(['']);
-
-    const toggleCategory = (category: string) => {
-        setSelectedCategories((prev) =>
-            prev.includes(category)
-                ? prev.filter((c) => c !== category)
-                : [...prev, category]
+    const toggleStyle = (val: string) => {
+        setSelectedStyles(prev =>
+            prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
         );
     };
 
-    const addKeyword = () => {
-        if (keywords.length < 5) {
-            setKeywords([...keywords, '']);
-        }
+    const toggleSize = (val: string) => {
+        setSelectedSizes(prev =>
+            prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+        );
     };
 
-    const updateKeyword = (index: number, value: string) => {
-        const newKeywords = [...keywords];
-        newKeywords[index] = value;
-        setKeywords(newKeywords);
-    };
-
-    const removeKeyword = (index: number) => {
-        setKeywords(keywords.filter((_, i) => i !== index));
-    };
-
-    const handleComplete = async () => {
-        if (!user) {
-            console.error('No user found - redirecting to signup');
-            alert('You must be logged in to complete onboarding. Redirecting to signup...');
-            router.push('/auth/signup');
+    const handleSaveAndNext = async () => {
+        if (step < 3) {
+            setStep(step + 1);
             return;
         }
 
-        console.log('Starting onboarding completion for user:', user.id);
+        // Final completion logic
         setLoading(true);
-
         try {
-            // Update user profile (use upsert to create if it doesn't exist)
-            console.log('Updating user profile...');
-            const { error: profileError } = await supabase
+            // Save to user_profiles
+            await supabase
                 .from('user_profiles')
                 .upsert({
-                    id: user.id,
-                    email: user.email,
+                    id: user?.id,
                     onboarding_completed: true,
-                    onboarding_step: 4,
                 }, { onConflict: 'id' });
 
-            if (profileError) {
-                console.error('Profile update error:', profileError);
-                throw profileError;
-            }
-            console.log('✓ Profile updated');
-
-            // Save keywords
-            const validKeywords = keywords.filter((k) => k.trim() !== '');
-            console.log('Saving keywords:', validKeywords);
-
-            if (validKeywords.length > 0) {
-                const keywordRecords = validKeywords.map((keyword) => ({
-                    user_id: user.id,
-                    keyword: keyword.trim().toLowerCase(),
-                    is_active: true,
-                }));
-
-                const { error: keywordError } = await supabase
-                    .from('user_keywords')
-                    .insert(keywordRecords);
-
-                if (keywordError) {
-                    console.error('Keyword insert error:', keywordError);
-                    // Don't throw - keywords are optional
-                } else {
-                    console.log('✓ Keywords saved');
-                }
+            // Store preferences for UX Synergy
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('artscaler_pref_styles', JSON.stringify(selectedStyles));
+                localStorage.setItem('artscaler_pref_sizes', JSON.stringify(selectedSizes));
             }
 
-            // Redirect to dashboard
-            console.log('Redirecting to dashboard...');
-            router.push('/dashboard');
+            // Generate query for step 3 logic usually redirecting
+            const primaryStyle = selectedStyles[0] || 'modern';
+            const primarySize = selectedSizes[0] || '';
+            const query = encodeURIComponent(`${primaryStyle} painting ${primarySize}`);
+
+            router.push(`/market-scanner?q=${query}&onboarding=true`);
         } catch (error) {
-            console.error('Onboarding error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            alert(`Error completing onboarding: ${errorMessage}`);
+            console.error('Onboarding save error:', error);
+            router.push('/dashboard');
         } finally {
             setLoading(false);
         }
     };
 
-    const canProceed = () => {
-        if (step === 2) return selectedCategories.length > 0;
-        if (step === 3) return keywords.some((k) => k.trim() !== '');
-        return true;
-    };
-
-    // Show loading state while checking auth
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
-                <div className="text-center">
-                    <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
-                    <p className="text-gray-300">Loading...</p>
-                </div>
-            </div>
-        );
-    }
+    if (authLoading) return null;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
-            <div className="w-full max-w-2xl">
-                {/* Progress Bar */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-2">
-                        {[1, 2, 3, 4].map((s) => (
-                            <div
-                                key={s}
-                                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${s <= step
-                                    ? 'bg-blue-600 border-blue-600 text-white'
-                                    : 'bg-gray-800 border-gray-700 text-gray-500'
-                                    }`}
-                            >
-                                {s < step ? <Check className="h-5 w-5" /> : s}
-                            </div>
-                        ))}
+        <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            {/* Background Decoration */}
+            <div className="absolute top-0 left-0 w-full h-full -z-10 opacity-30">
+                <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-600/20 blur-[150px] rounded-full"></div>
+                <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-purple-600/20 blur-[150px] rounded-full"></div>
+            </div>
+
+            <div className="w-full max-w-2xl relative z-10">
+                {/* Header */}
+                <div className="text-center mb-12">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full mb-6">
+                        <Sparkles className="h-4 w-4 text-blue-400" />
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Personalizing your experience</span>
                     </div>
-                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500"
-                            style={{ width: `${(step / 4) * 100}%` }}
-                        />
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                        {[1, 2, 3].map(s => (
+                            <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ${s <= step ? 'w-12 bg-blue-500' : 'w-4 bg-white/10'}`}></div>
+                        ))}
                     </div>
                 </div>
 
                 {/* Content Card */}
-                <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 shadow-2xl">
-                    {/* Step 1: Welcome */}
+                <div className="bg-gray-900/40 backdrop-blur-2xl border border-white/5 rounded-[40px] p-10 md:p-16 shadow-2xl relative overflow-hidden">
+                    {/* Step 1: Styles */}
                     {step === 1 && (
-                        <div className="text-center space-y-6">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mb-4">
-                                <Sparkles className="h-10 w-10 text-white" />
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom duration-500">
+                            <div className="text-center">
+                                <h1 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight italic uppercase">What do you <span className="text-blue-500">create?</span></h1>
+                                <p className="text-gray-400 font-medium">Help us tailor your market intelligence</p>
                             </div>
-                            <h2 className="text-3xl font-bold text-white">Welcome to ArtScaler!</h2>
-                            <p className="text-gray-300 text-lg max-w-lg mx-auto">
-                                The #1 art research engine for eBay sellers. We track real-time demand,
-                                bid velocity, and watch counts to maximize your sales.
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-                                <div className="bg-gray-800/50 rounded-xl p-4">
-                                    <Target className="h-8 w-8 text-blue-400 mx-auto mb-2" />
-                                    <h3 className="font-semibold text-white mb-1">Pulse Tracking</h3>
-                                    <p className="text-sm text-gray-400">
-                                        Monitor live bid heatmaps and watch counts
-                                    </p>
-                                </div>
-                                <div className="bg-gray-800/50 rounded-xl p-4">
-                                    <Search className="h-8 w-8 text-purple-400 mx-auto mb-2" />
-                                    <h3 className="font-semibold text-white mb-1">Price ML</h3>
-                                    <p className="text-sm text-gray-400">
-                                        Predict sale prices with 94% accuracy
-                                    </p>
-                                </div>
-                                <div className="bg-gray-800/50 rounded-xl p-4">
-                                    <Rocket className="h-8 w-8 text-green-400 mx-auto mb-2" />
-                                    <h3 className="font-semibold text-white mb-1">Auto Listing</h3>
-                                    <p className="text-sm text-gray-400">
-                                        Generate optimized templates in one click
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Step 2: Art Categories */}
-                    {step === 2 && (
-                        <div className="space-y-6">
-                            <div>
-                                <h2 className="text-2xl font-bold text-white mb-2">
-                                    What types of art do you sell?
-                                </h2>
-                                <p className="text-gray-400">Select all that apply</p>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {ART_CATEGORIES.map((category) => (
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                {STYLE_OPTIONS.map((opt) => (
                                     <button
-                                        key={category}
-                                        onClick={() => toggleCategory(category)}
-                                        className={`p-4 rounded-lg border-2 transition-all ${selectedCategories.includes(category)
-                                            ? 'bg-blue-600/20 border-blue-600 text-blue-400'
-                                            : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-gray-600'
-                                            }`}
+                                        key={opt.value}
+                                        onClick={() => toggleStyle(opt.value)}
+                                        className={`p-6 rounded-3xl border transition-all flex flex-col items-center gap-4 group ${selectedStyles.includes(opt.value)
+                                            ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-600/20'
+                                            : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:bg-white/10'}`}
                                     >
-                                        {category}
+                                        <span className="text-3xl group-hover:scale-125 transition-transform">{opt.icon}</span>
+                                        <span className="font-bold text-sm uppercase tracking-widest">{opt.label}</span>
                                     </button>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    {/* Step 3: Initial Keywords */}
+                    {/* Step 2: Sizes */}
+                    {step === 2 && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom duration-500">
+                            <div className="text-center">
+                                <h1 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight italic uppercase">What <span className="text-purple-500">sizes</span> do you typically create?</h1>
+                                <p className="text-gray-400 font-medium">We'll filter market data to match your formats</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {SIZE_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => toggleSize(opt.value)}
+                                        className={`p-8 rounded-[32px] border transition-all flex items-center justify-between group ${selectedSizes.includes(opt.value)
+                                            ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-600/20'
+                                            : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:bg-white/10'}`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedSizes.includes(opt.value) ? 'border-white bg-white/20' : 'border-white/10'}`}>
+                                                {selectedSizes.includes(opt.value) && <Check className="h-4 w-4" />}
+                                            </div>
+                                            <span className="font-bold uppercase tracking-widest text-sm">{opt.label}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Run First Scan */}
                     {step === 3 && (
-                        <div className="space-y-6">
-                            <div>
-                                <h2 className="text-2xl font-bold text-white mb-2">
-                                    Pulse Keywords
-                                </h2>
-                                <p className="text-gray-400">
-                                    Which niches should we pulse first? Add 3-5 keywords.
+                        <div className="text-center space-y-10 animate-in fade-in zoom-in duration-500">
+                            <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-600 rounded-[32px] mx-auto flex items-center justify-center shadow-2xl animate-bounce">
+                                <Search className="h-10 w-10 text-white" />
+                            </div>
+
+                            <div className="space-y-4">
+                                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter italic uppercase">Let's run your <br /><span className="text-blue-500">first market scan</span></h1>
+                                <p className="text-gray-400 font-medium max-w-md mx-auto leading-relaxed">
+                                    We've pre-filled a search based on your preferences. Click below to see what's selling right now.
                                 </p>
                             </div>
-                            <div className="space-y-3">
-                                {keywords.map((keyword, index) => (
-                                    <div key={index} className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={keyword}
-                                            onChange={(e) => updateKeyword(index, e.target.value)}
-                                            placeholder={`Keyword ${index + 1} (e.g., "banksy art")`}
-                                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            data-testid={`keyword-input-${index}`}
-                                        />
-                                        {keywords.length > 1 && (
-                                            <button
-                                                onClick={() => removeKeyword(index)}
-                                                className="px-4 py-3 bg-red-900/20 border border-red-700/50 rounded-lg text-red-400 hover:bg-red-900/30 transition-all"
-                                            >
-                                                Remove
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                                {keywords.length < 5 && (
-                                    <button
-                                        onClick={addKeyword}
-                                        className="w-full py-3 border-2 border-dashed border-gray-700 rounded-lg text-gray-400 hover:border-gray-600 hover:text-gray-300 transition-all"
-                                        data-testid="add-keyword-btn"
-                                    >
-                                        + Add another keyword
-                                    </button>
-                                )}
+
+                            <div className="p-8 bg-blue-600/5 border border-blue-500/10 rounded-3xl inline-block w-full text-left">
+                                <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Auto-generated research query:</p>
+                                <div className="text-xl font-mono text-blue-400 font-bold">
+                                    {selectedStyles[0] || 'abstract'} {selectedSizes[0] || 'medium'} painting
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Step 4: Ready to Launch */}
-                    {step === 4 && (
-                        <div className="text-center space-y-6">
-                            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-green-600 to-blue-600 mb-4">
-                                <Rocket className="h-10 w-10 text-white" />
-                            </div>
-                            <h2 className="text-3xl font-bold text-white">System Ready!</h2>
-                            <p className="text-gray-300 text-lg max-w-lg mx-auto">
-                                Your eBay pulse monitor is initialized. We're scanning the markets now.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Navigation Buttons */}
-                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-800">
-                        {step > 1 && (
+                    {/* Navigation */}
+                    <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between gap-6">
+                        {step > 1 ? (
                             <button
                                 onClick={() => setStep(step - 1)}
-                                disabled={loading}
-                                className="px-6 py-3 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-all disabled:opacity-50"
+                                className="text-gray-500 font-black uppercase tracking-widest text-xs hover:text-white transition-colors"
                             >
                                 Back
                             </button>
-                        )}
-                        <div className="flex-1" />
-                        {step < 4 ? (
-                            <button
-                                onClick={() => setStep(step + 1)}
-                                disabled={!canProceed()}
-                                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                data-testid="continue-btn"
-                            >
-                                Continue
-                            </button>
                         ) : (
                             <button
-                                onClick={handleComplete}
-                                disabled={loading}
-                                className="px-8 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center gap-2"
-                                data-testid="go-to-dashboard-btn"
+                                onClick={() => router.push('/dashboard')}
+                                className="text-gray-500 font-black uppercase tracking-widest text-xs hover:text-white transition-colors"
                             >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Syncing Pulse...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Rocket className="h-5 w-5" />
-                                        Enter Hub
-                                    </>
-                                )}
+                                Skip Onboarding
                             </button>
                         )}
+
+                        <button
+                            onClick={handleSaveAndNext}
+                            disabled={loading || (step === 1 && selectedStyles.length === 0) || (step === 2 && selectedSizes.length === 0)}
+                            className="bg-white text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 transition-all shadow-xl disabled:opacity-30 disabled:hover:scale-100 flex items-center gap-3"
+                        >
+                            {loading ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <>
+                                    {step === 3 ? 'Run My First Scan' : 'Next Step'}
+                                    <ArrowRight className="h-5 w-5" />
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>

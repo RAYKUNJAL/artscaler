@@ -84,7 +84,7 @@ export default function Sidebar({ onClose, mobile }: SidebarProps) {
             // Load tier from subscription status
             const { data: profile } = await supabase
                 .from('user_profiles')
-                .select('subscription_tier, roadmap_tier')
+                .select('subscription_tier')
                 .eq('id', user.id)
                 .single();
 
@@ -107,8 +107,8 @@ export default function Sidebar({ onClose, mobile }: SidebarProps) {
 
     const getTierBadge = () => {
         switch (tier.toLowerCase()) {
-            case 'empire': return { text: 'STUDIO EMPIRE', color: 'bg-gradient-to-r from-yellow-500 to-amber-600' };
-            case 'painter': return { text: 'PRO PAINTER', color: 'bg-gradient-to-r from-blue-500 to-indigo-600' };
+            case 'studio': return { text: 'STUDIO EMPIRE', color: 'bg-gradient-to-r from-yellow-500 to-amber-600' };
+            case 'pro': return { text: 'PRO PAINTER', color: 'bg-gradient-to-r from-blue-500 to-indigo-600' };
             default: return { text: 'FREE SCOUT', color: 'bg-gray-700' };
         }
     };
@@ -126,11 +126,12 @@ export default function Sidebar({ onClose, mobile }: SidebarProps) {
                     <h1 className="text-sm font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent uppercase tracking-tighter">
                         ArtScaler
                     </h1>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">v4.0 FINAL</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">v5.0 BLUEPRINT</p>
                 </div>
                 {mobile && onClose && (
                     <button
                         onClick={onClose}
+                        title="Close Menu"
                         className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
                     >
                         <X className="h-5 w-5" />

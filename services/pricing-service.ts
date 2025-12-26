@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
-export type TierId = 'free' | 'artist' | 'studio' | 'empire';
+export type TierId = 'free' | 'pro' | 'studio';
 
 export interface TierLimits {
     dailyScrapes: number;
@@ -18,8 +18,8 @@ export interface TierLimits {
 
 export const TIER_LIMITS: Record<TierId, TierLimits> = {
     free: {
-        dailyScrapes: 5,
-        keywords: 3,
+        dailyScrapes: 10,
+        keywords: 5,
         historicalDays: 7,
         hasPredictions: false,
         hasAutoListing: false,
@@ -30,9 +30,9 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
         hasAIAdvisor: false,
         aiCoachMessagesPerSession: 3
     },
-    artist: {
+    pro: {
         dailyScrapes: 100,
-        keywords: 25,
+        keywords: 50,
         historicalDays: 30,
         hasPredictions: true,
         hasAutoListing: false,
@@ -44,20 +44,7 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
         aiCoachMessagesPerSession: 20
     },
     studio: {
-        dailyScrapes: 500,
-        keywords: 100,
-        historicalDays: 180,
-        hasPredictions: true,
-        hasAutoListing: true,
-        hasAlerts: true,
-        hasCompetitorTracker: true,
-        hasApiAccess: false,
-        hasGlobalIntel: true,
-        hasAIAdvisor: true,
-        aiCoachMessagesPerSession: 100
-    },
-    empire: {
-        dailyScrapes: 5000,
+        dailyScrapes: 1000,
         keywords: 500,
         historicalDays: -1,
         hasPredictions: true,
@@ -67,7 +54,7 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
         hasApiAccess: true,
         hasGlobalIntel: true,
         hasAIAdvisor: true,
-        aiCoachMessagesPerSession: 1000 // Effectively unlimited
+        aiCoachMessagesPerSession: 100
     }
 };
 
@@ -109,15 +96,21 @@ export class PricingService {
     }
 
     /**
-     * Check if a user can perform a scrape
+     * Check if a user can perform a search/scrape
      */
     static async canScrape(supabase: SupabaseClient, userId: string): Promise<{ allowed: boolean; reason?: string }> {
-        const { tier, limits, usage } = await this.getUserUsage(supabase, userId);
+        const { data, error } = await supabase.rpc('check_and_increment_daily_limit', {
+            p_user_id: userId,
+            p_increment: 0 // Just check, don't increment yet
+        });
 
-        if (usage.scrapes_used >= limits.dailyScrapes) {
+        if (error) return { allowed: true }; // Fallback
+
+        const result = data[0];
+        if (result && !result.allowed) {
             return {
                 allowed: false,
-                reason: `You have reached your daily scrape limit for the ${tier} tier. Please upgrade for more.`
+                reason: `You have reached your daily search limit (${result.current_limit}). Please upgrade your plan for more searches.`
             };
         }
 
@@ -125,43 +118,13 @@ export class PricingService {
     }
 
     /**
-     * Increment scrape usage
+     * Increment search/scrape usage
      */
     static async recordScrape(supabase: SupabaseClient, userId: string) {
-        const periodStart = new Date();
-        periodStart.setHours(0, 0, 0, 0);
-        const dateStr = periodStart.toISOString().split('T')[0];
-
-        // Use upsert with increment logic (or a function)
-        // Since we don't have an increment RPC easily, we'll do an update
-        const { data: usage } = await supabase
-            .from('user_usage_tracking')
-            .select('scrapes_used')
-            .eq('user_id', userId)
-            .eq('period_start', dateStr)
-            .single();
-
-        if (usage) {
-            await supabase
-                .from('user_usage_tracking')
-                .update({
-                    scrapes_used: usage.scrapes_used + 1,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', userId)
-                .eq('period_start', dateStr);
-        } else {
-            // Create new period entry
-            await supabase
-                .from('user_usage_tracking')
-                .insert({
-                    user_id: userId,
-                    period_start: dateStr,
-                    period_end: dateStr, // Daily tracking for now
-                    scrapes_used: 1,
-                    scrapes_limit: TIER_LIMITS['free'].dailyScrapes // Default
-                });
-        }
+        await supabase.rpc('check_and_increment_daily_limit', {
+            p_user_id: userId,
+            p_increment: 1
+        });
     }
 
     /**

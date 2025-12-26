@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ArtCard from './ArtCard';
+import { DEMO_MARKET_DATA } from '@/lib/demo-data';
 import { Loader2, Sparkles, Filter, Grid3X3, Image as ImageIcon } from 'lucide-react';
 
 interface ArtGalleryGridProps {
@@ -20,6 +21,7 @@ export default function ArtGalleryGrid({
     const [listings, setListings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isDemo, setIsDemo] = useState(false);
 
     useEffect(() => {
         fetchGallery();
@@ -28,6 +30,7 @@ export default function ArtGalleryGrid({
     async function fetchGallery() {
         try {
             setLoading(true);
+            setIsDemo(false);
             const url = initialStyle
                 ? `/api/gallery/sold?style=${initialStyle}&limit=${limit}`
                 : `/api/gallery/sold?limit=${limit}`;
@@ -35,13 +38,63 @@ export default function ArtGalleryGrid({
             const res = await fetch(url);
             const data = await res.json();
 
-            if (data.success) {
-                setListings(data.listings || []);
+            if (data.success && data.listings && data.listings.length > 0) {
+                setListings(data.listings);
+                setIsDemo(false);
             } else {
-                setError(data.error);
+                // UX Synergy Logic: Filter demo data by user preferences
+                let preferredStyles: string[] = [];
+                if (typeof window !== 'undefined') {
+                    const saved = localStorage.getItem('artscaler_pref_styles');
+                    if (saved) preferredStyles = JSON.parse(saved);
+                }
+
+                const mapped = DEMO_MARKET_DATA.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    sold_price: item.price,
+                    currency: 'USD',
+                    sold_date: new Date().toISOString(),
+                    image_url: item.image_url,
+                    item_url: item.item_url,
+                    visual_metadata: {
+                        primary_style: item.style,
+                        colors: ['#2563eb', '#7c3aed'],
+                        mood: 'High Energy'
+                    },
+                    niche_tags: item.niche_tags
+                }));
+
+                // Sort: items that match preferred styles come first
+                const sorted = [...mapped].sort((a, b) => {
+                    const aMatch = preferredStyles.some(s => a.niche_tags?.includes(s) || a.visual_metadata.primary_style === s);
+                    const bMatch = preferredStyles.some(s => b.niche_tags?.includes(s) || b.visual_metadata.primary_style === s);
+                    if (aMatch && !bMatch) return -1;
+                    if (!aMatch && bMatch) return 1;
+                    return 0;
+                });
+
+                setListings(sorted);
+                setIsDemo(true);
             }
         } catch (err: any) {
-            setError(err.message);
+            console.error('Gallery fetch error:', err);
+            // Fallback to demo
+            setListings(DEMO_MARKET_DATA.map(item => ({
+                id: item.id,
+                title: item.title,
+                sold_price: item.price,
+                currency: 'USD',
+                sold_date: new Date().toISOString(),
+                image_url: item.image_url,
+                item_url: item.item_url,
+                visual_metadata: {
+                    primary_style: item.style,
+                    colors: ['#2563eb', '#7c3aed'],
+                    mood: 'High Energy'
+                }
+            })));
+            setIsDemo(true);
         } finally {
             setLoading(false);
         }

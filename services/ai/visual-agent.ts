@@ -9,9 +9,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+import { generateResponse } from '@/lib/ai/vertexClient';
 
 export interface VisualMetadata {
     colors: string[]; // Hex codes
@@ -74,8 +72,6 @@ export class VisualAgent {
      */
     private async analyzeImage(imageUrl: string, title: string): Promise<VisualMetadata | null> {
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
             // Fetch image as base64
             const imageResponse = await fetch(imageUrl);
             const arrayBuffer = await imageResponse.arrayBuffer();
@@ -98,17 +94,10 @@ Extract visual metadata and respond in STRICT JSON format:
 Dominant colors should be 5 hex codes.
 Primary style should be one of: Abstract, Landscape, Portrait, Street Art, Minimalist, Pop Art, Realism.`;
 
-            const result = await model.generateContent([
-                prompt,
-                {
-                    inlineData: {
-                        data: base64Image,
-                        mimeType: 'image/jpeg'
-                    }
-                }
-            ]);
-
-            const text = result.response.text();
+            const text = await generateResponse(prompt, [], {
+                data: base64Image,
+                mimeType: 'image/jpeg'
+            });
             const jsonMatch = text.match(/\{[\s\S]*\}/);
 
             if (jsonMatch) {

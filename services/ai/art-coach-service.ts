@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateResponse } from '@/lib/ai/vertexClient';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { EBAY_ART_KNOWLEDGE_BASE } from './knowledge-base';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+// genAI is no longer needed - we use generateResponse from vertexClient
 
 export class ArtCoachService {
     /**
@@ -89,23 +89,17 @@ PERSONALITY:
 
         try {
             // 5. Run AI
-            // Re-instantiate here to ensure we pick up the latest env var or handle errors if the top-level one failed silently
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            // Format history for Vertex AI REST format
+            const vertexHistory = (history || []).map(h => ({
+                role: h.role === 'user' ? 'user' : 'model',
+                parts: [{ text: h.content }],
+            }));
 
-            const chat = model.startChat({
-                history: (history || []).map(h => ({
-                    role: h.role === 'user' ? 'user' : 'model',
-                    parts: [{ text: h.content }],
-                })),
-            });
-
-            const result = await chat.sendMessage([
-                { text: systemPrompt },
-                { text: params.message }
-            ]);
-
-            const responseText = result.response.text();
+            // Include system prompt as first user message or as context?
+            // Vertex AI REST usually takes it as separate systemInstruction, 
+            // but for simple chat we can prepend it to the history or prompt.
+            const fullPrompt = `SYSTEM: ${systemPrompt}\n\nUSER: ${params.message}`;
+            const responseText = await generateResponse(fullPrompt, vertexHistory);
 
             // 6. Persist Messages
             const { error: msgError } = await supabase.from('coach_messages').insert([

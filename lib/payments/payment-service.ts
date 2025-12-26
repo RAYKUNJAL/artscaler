@@ -51,11 +51,11 @@ export class PaymentService {
         return [
             {
                 tier_id: 'free',
-                name: 'Free Scout',
+                name: 'Free',
                 price_monthly: 0,
                 price_yearly: 0,
-                daily_scrapes_limit: 5,
-                keywords_limit: 3,
+                daily_scrapes_limit: 10,
+                keywords_limit: 5,
                 historical_data_days: 7,
                 features: {
                     predictions: false,
@@ -66,14 +66,14 @@ export class PaymentService {
                 }
             },
             {
-                tier_id: 'artist',
-                name: 'Artist',
-                price_monthly: 20,
-                price_yearly: 200,
-                paypal_plan_id_monthly: 'P-93R941369E791822TNFDPZOY',
+                tier_id: 'pro',
+                name: 'Pro',
+                price_monthly: 29,
+                price_yearly: 290,
+                paypal_plan_id_monthly: 'P-93R941369E791822TNFDPZOY', // Existing plan ID (needs update eventually)
                 paypal_plan_id_yearly: 'P-1WH57033YC383741JNFDP4BY',
                 daily_scrapes_limit: 100,
-                keywords_limit: 25,
+                keywords_limit: 50,
                 historical_data_days: 30,
                 features: {
                     predictions: true,
@@ -86,31 +86,13 @@ export class PaymentService {
             {
                 tier_id: 'studio',
                 name: 'Studio',
-                price_monthly: 50,
-                price_yearly: 500,
+                price_monthly: 79,
+                price_yearly: 790,
                 paypal_plan_id_monthly: 'P-0UH88477E2468231XNFDP76I',
                 paypal_plan_id_yearly: 'P-7MC590887C4107522NFDREUA',
-                daily_scrapes_limit: 500,
-                keywords_limit: 100,
-                historical_data_days: 180,
-                features: {
-                    predictions: true,
-                    auto_listing: true,
-                    alerts: true,
-                    competitor_tracker: true,
-                    api_access: false
-                }
-            },
-            {
-                tier_id: 'empire',
-                name: 'Empire',
-                price_monthly: 120,
-                price_yearly: 1200,
-                paypal_plan_id_monthly: 'P-1A391899RE784140BNFDRJ2Q',
-                paypal_plan_id_yearly: 'P-86L79354K19034538NFDROJY',
-                daily_scrapes_limit: 5000,
+                daily_scrapes_limit: 1000,
                 keywords_limit: 500,
-                historical_data_days: -1, // Unlimited
+                historical_data_days: -1,
                 features: {
                     predictions: true,
                     auto_listing: true,
@@ -135,9 +117,8 @@ export class PaymentService {
     static getPricing(tierId: string, billingCycle: BillingCycle): number {
         const plans: Record<string, { monthly: number; yearly: number }> = {
             free: { monthly: 0, yearly: 0 },
-            artist: { monthly: 20, yearly: 200 },
-            studio: { monthly: 50, yearly: 500 },
-            empire: { monthly: 120, yearly: 1200 }
+            pro: { monthly: 29, yearly: 290 },
+            studio: { monthly: 79, yearly: 790 }
         };
 
         const plan = plans[tierId];
@@ -151,9 +132,8 @@ export class PaymentService {
      */
     static calculateYearlySavings(tierId: string): number {
         const plans: Record<string, { monthly: number; yearly: number }> = {
-            artist: { monthly: 20, yearly: 200 },
-            studio: { monthly: 50, yearly: 500 },
-            empire: { monthly: 120, yearly: 1200 }
+            pro: { monthly: 29, yearly: 290 },
+            studio: { monthly: 79, yearly: 790 }
         };
 
         const plan = plans[tierId];

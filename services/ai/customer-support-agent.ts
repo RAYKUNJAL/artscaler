@@ -8,7 +8,7 @@
  * - Custom artwork requests
  */
 
-import { GeminiAIService } from './gemini-service';
+import { generateResponse } from '@/lib/ai/vertexClient';
 
 export interface SupportMessage {
     role: 'user' | 'assistant';
@@ -27,14 +27,11 @@ export class CustomerSupportAgent {
     /**
      * Generate AI response to buyer question
      */
-    static async generateResponse(
+    static async generateSupportResponse(
         question: string,
         context: SupportContext,
         conversationHistory: SupportMessage[] = []
     ): Promise<string> {
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
         // Build conversation context
         const historyText = conversationHistory
@@ -77,9 +74,13 @@ ${question}
 Respond as the artist's support agent:`;
 
         try {
-            const result = await model.generateContent(systemPrompt);
-            const response = result.response;
-            return response.text().trim();
+            // Format history for Vertex AI
+            const vertexHistory = conversationHistory.map(msg => ({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.content }]
+            }));
+
+            return await generateResponse(systemPrompt, vertexHistory);
         } catch (error) {
             console.error('[AI Support] Error:', error);
 

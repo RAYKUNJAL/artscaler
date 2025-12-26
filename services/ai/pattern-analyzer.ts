@@ -1,6 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+import { generateResponse } from '@/lib/ai/vertexClient';
 
 export interface ArtAttributes {
     subjectType: string;
@@ -18,17 +16,10 @@ export interface ArtAttributes {
 
 export class ArtPatternAnalyzer {
     /**
-     * Extracts deep artistic patterns using AI Analysis (Gemini 1.5 Flash for cost efficiency)
+     * Extracts deep artistic patterns using AI Analysis (Gemini 1.5 Flash via Vertex AI for cost efficiency)
      */
     async analyze(title: string, description: string): Promise<ArtAttributes | null> {
-        if (!process.env.GOOGLE_GEMINI_API_KEY) {
-            console.warn('⚠️ Gemini API Key missing. Returning default attributes.');
-            return this.getDefaultAttributes();
-        }
-
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
             const prompt = `You are an art market expert. Analyze the provided art listing title and description.
             Extract specific patterns into JSON format with these exact keys:
             - subject_type (e.g., Abstract, Landscape, Portrait)
@@ -48,9 +39,7 @@ export class ArtPatternAnalyzer {
             
             Respond ONLY with the valid JSON.`;
 
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const text = await generateResponse(prompt);
 
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};

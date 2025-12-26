@@ -33,6 +33,12 @@ export async function GET(request: NextRequest) {
 
         // Fetch fresh stats
         const stats = await MarketAggregator.getGlobalStats();
+        const usage = await MarketAggregator.getUserUsage(user.id);
+
+        const statsWithUsage = {
+            ...stats,
+            dailyUsage: usage
+        };
 
         // Update cache (async)
         MarketAggregator.updateDashboardCache(user.id).catch(err => {
@@ -41,7 +47,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            stats,
+            stats: statsWithUsage,
             fromCache: false
         });
 

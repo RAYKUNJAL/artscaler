@@ -16,7 +16,9 @@ import {
     Sparkles,
     CheckCircle2,
     AlertTriangle,
+    AlertCircle
 } from 'lucide-react';
+import { DEMO_PLANNER_RECS, getDemoBadge } from '@/lib/demo-data';
 
 interface PlanBreakdown {
     style: string;
@@ -59,6 +61,7 @@ export default function RevenuePlannerPage() {
     const [progress, setProgress] = useState<Progress | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isDemo, setIsDemo] = useState(false);
 
     // Form inputs
     const [targetMonthly, setTargetMonthly] = useState(20000);
@@ -74,15 +77,58 @@ export default function RevenuePlannerPage() {
     }, []);
 
     const loadPlan = async () => {
+        setIsLoading(true);
+        setIsDemo(false);
         try {
             const res = await fetch('/api/revenue-plan?progress=true');
             const data = await res.json();
             if (data.success && data.plan) {
                 setPlan(data.plan);
                 setProgress(data.progress);
+                setIsDemo(false);
+            } else {
+                // Set a solid Demo Plan ($20k track)
+                setPlan({
+                    targetMonthly: 20000,
+                    achievable: true,
+                    breakdown: DEMO_PLANNER_RECS.map(r => ({
+                        style: r.subject,
+                        size: '16x20',
+                        count: 10,
+                        targetPrice: r.score * 40,
+                        expectedRevenue: (r.score * 40) * 10 * 0.5,
+                        demandScore: r.score * 10
+                    })),
+                    summary: {
+                        totalPiecesNeeded: 35,
+                        totalPiecesToList: 70,
+                        weeklyOutput: 18,
+                        avgPriceNeeded: 285,
+                        estimatedRevenue: 20000,
+                        gap: 0
+                    },
+                    recommendations: [
+                        "🎯 Focus on 'High Demand' subjects (Abstract/Urban) to maximize turnover.",
+                        "⚡ Increase production to 18 units per week to stay on track for $20k.",
+                        "💎 Curate premium descriptions for higher WVS items to increase target price by 15%."
+                    ],
+                    adjustments: {
+                        ifHigherPrice: { price: 350, piecesNeeded: 28 },
+                        ifMoreOutput: { weekly: 22, piecesNeeded: 44 },
+                        ifBetterSellThrough: { rate: 0.7, piecesNeeded: 25 }
+                    }
+                });
+                setProgress({
+                    target: 20000,
+                    achieved: 8450,
+                    percentComplete: 42,
+                    daysRemaining: 18
+                });
+                setIsDemo(true);
             }
         } catch (err) {
             console.error('Error loading plan:', err);
+            setIsDemo(true);
         } finally {
             setIsLoading(false);
         }
@@ -144,7 +190,7 @@ export default function RevenuePlannerPage() {
             <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-10">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <a href="/dashboard" className="text-gray-400 hover:text-white transition-colors">
+                        <a href="/dashboard" className="text-gray-400 hover:text-white transition-colors" title="Back to Dashboard">
                             <ArrowLeft className="h-5 w-5" />
                         </a>
                         <div className="flex items-center gap-3">
@@ -153,7 +199,13 @@ export default function RevenuePlannerPage() {
                             </div>
                             <div>
                                 <h1 className="text-xl font-bold text-white">Revenue Planner</h1>
-                                <p className="text-sm text-gray-400">Plan your path to $20K/month</p>
+                                <p className="text-sm text-gray-400">Plan your path up to $20K/month</p>
+                                {isDemo && (
+                                    <div className="mt-2 inline-flex items-center gap-2 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded text-amber-500">
+                                        <AlertCircle className="h-3 w-3" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest">{getDemoBadge('Growth Planner')}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -182,10 +234,10 @@ export default function RevenuePlannerPage() {
                         <div className="h-4 bg-gray-800 rounded-full overflow-hidden">
                             <div
                                 className={`h-full transition-all duration-500 ${progress.percentComplete >= 100
-                                        ? 'bg-green-500'
-                                        : progress.percentComplete >= 50
-                                            ? 'bg-blue-500'
-                                            : 'bg-purple-500'
+                                    ? 'bg-green-500'
+                                    : progress.percentComplete >= 50
+                                        ? 'bg-blue-500'
+                                        : 'bg-purple-500'
                                     }`}
                                 style={{ width: `${Math.min(progress.percentComplete, 100)}%` }}
                             />
@@ -205,8 +257,10 @@ export default function RevenuePlannerPage() {
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">Monthly Target ($)</label>
                             <input
+                                id="target_monthly_input"
                                 type="number"
                                 value={targetMonthly}
+                                title="Target Monthly Revenue"
                                 onChange={(e) => setTargetMonthly(parseInt(e.target.value) || 0)}
                                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:border-blue-500"
                             />
@@ -216,8 +270,8 @@ export default function RevenuePlannerPage() {
                                         key={preset}
                                         onClick={() => setTargetMonthly(preset)}
                                         className={`px-2 py-1 text-xs rounded ${targetMonthly === preset
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                                             }`}
                                     >
                                         ${(preset / 1000)}K
@@ -230,8 +284,10 @@ export default function RevenuePlannerPage() {
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">Avg Sale Price ($)</label>
                             <input
+                                id="avg_sale_price_input"
                                 type="number"
                                 value={avgSalePrice}
+                                title="Average Sale Price"
                                 onChange={(e) => setAvgSalePrice(parseInt(e.target.value) || 0)}
                                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:border-blue-500"
                             />
@@ -244,11 +300,13 @@ export default function RevenuePlannerPage() {
                                 Sell-through Rate: {Math.round(sellThroughRate * 100)}%
                             </label>
                             <input
+                                id="sell_through_rate_input"
                                 type="range"
                                 min="0.1"
                                 max="0.9"
                                 step="0.1"
                                 value={sellThroughRate}
+                                title="Target Sell-through Rate"
                                 onChange={(e) => setSellThroughRate(parseFloat(e.target.value))}
                                 className="w-full h-3 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
                             />
@@ -263,8 +321,10 @@ export default function RevenuePlannerPage() {
                         <div>
                             <label className="block text-sm text-gray-400 mb-2">Weekly Capacity</label>
                             <input
+                                id="weekly_capacity_input"
                                 type="number"
                                 value={weeklyCapacity}
+                                title="Weekly Content Capacity"
                                 onChange={(e) => setWeeklyCapacity(parseInt(e.target.value) || 0)}
                                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:border-blue-500"
                             />
@@ -337,8 +397,8 @@ export default function RevenuePlannerPage() {
                     <div className="space-y-8">
                         {/* Status Banner */}
                         <div className={`p-4 rounded-xl flex items-center gap-4 ${plan.achievable
-                                ? 'bg-green-500/10 border border-green-500/30'
-                                : 'bg-yellow-500/10 border border-yellow-500/30'
+                            ? 'bg-green-500/10 border border-green-500/30'
+                            : 'bg-yellow-500/10 border border-yellow-500/30'
                             }`}>
                             {plan.achievable ? (
                                 <>

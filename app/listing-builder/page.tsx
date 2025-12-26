@@ -2,22 +2,52 @@
 
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { PenTool, Sparkles, Copy, Check, Info, Layout, Scissors } from 'lucide-react';
+import { PenTool, Sparkles, Copy, Check, Info, Layout, Scissors, AlertCircle } from 'lucide-react';
 import { getListingGeneratorAgent, PulseListingTemplate } from '@/services/ai/listing-generator-agent';
+import { DEMO_PRICING_DATA, getDemoBadge } from '@/lib/demo-data';
 
 export default function ListingBuilderPage() {
     const [topic, setTopic] = useState('Banksy Style Street Art');
     const [template, setTemplate] = useState<PulseListingTemplate | null>(null);
     const [loading, setLoading] = useState(false);
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+    const [isDemo, setIsDemo] = useState(false);
+
+    useState(() => {
+        // Initial demo state
+        setTemplate({
+            title_variants: [
+                "Original Abstract Nebula - 16x20 Acrylic on Canvas - Hand Painted Modern Art",
+                "Nebula Space Art 16x20 Original Painting - Vibrant Celestial Abstract",
+                "Large 16x20 Abstract Acrylic - Original Contemporary Nebula Wall Art"
+            ],
+            topic_label: "Nebula Abstract Art",
+            description_snippet: "This hand-painted 16x20 nebula abstract piece features deep celestial blues and vibrant cosmic purples...",
+            keyword_stack: ["nebula", "abstract", "original", "acrylic", "canvas", "hand painted", "16x20"],
+            price_advice: {
+                optimal: DEMO_PRICING_DATA.recommended,
+                min: DEMO_PRICING_DATA.floor,
+                max: DEMO_PRICING_DATA.aggressive
+            },
+            format: "Buy It Now",
+            stencil_recommendation: "Use 'Premium Artist' stencil with backlit lighting for celestial subjects."
+        });
+        setIsDemo(true);
+    });
 
     const generate = async () => {
         setLoading(true);
-        const agent = getListingGeneratorAgent();
-        // Mock data for generation
-        const res = await agent.generatePulseListing(null as any, topic, 185, 4.2);
-        setTemplate(res);
-        setLoading(false);
+        setIsDemo(false);
+        try {
+            const agent = getListingGeneratorAgent();
+            // Mock data for generation
+            const res = await agent.generatePulseListing(null as any, topic, 185, 4.2);
+            setTemplate(res);
+        } catch (error) {
+            console.error('Error generating listing:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const copyToClipboard = (text: string, index: number) => {
@@ -37,6 +67,12 @@ export default function ListingBuilderPage() {
                             AI Listing Builder
                         </h1>
                         <p className="text-gray-400">Generate high-conversion eBay listings powered by real-time Pulse data.</p>
+                        {isDemo && (
+                            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{getDemoBadge('Listing Builder')}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

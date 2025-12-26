@@ -16,6 +16,10 @@ export interface MarketStats {
     topStyles: any[];
     topSizes: any[];
     lastUpdated: string;
+    dailyUsage?: {
+        used: number;
+        limit: number;
+    };
 }
 
 export class MarketAggregator {
@@ -100,18 +104,41 @@ export class MarketAggregator {
     }
 
     /**
+     * Get user-specific daily usage
+     */
+    static async getUserUsage(userId: string): Promise<{ used: number; limit: number }> {
+        const supabase = await createServerClient();
+        const { data } = await supabase
+            .from('user_daily_usage')
+            .select('searches_count, searches_limit')
+            .eq('user_id', userId)
+            .eq('usage_date', new Date().toISOString().split('T')[0])
+            .single();
+
+        return {
+            used: data?.searches_count || 0,
+            limit: data?.searches_limit || 10
+        };
+    }
+
+    /**
      * Update user dashboard cache
      */
     static async updateDashboardCache(userId: string): Promise<void> {
         const stats = await this.getGlobalStats();
-        // Here we could add user-specific stats like "Your Scans"
+        const usage = await this.getUserUsage(userId);
+
+        const fullStats = {
+            ...stats,
+            dailyUsage: usage
+        };
 
         const supabase = await createServerClient();
         await supabase
             .from('user_dashboard_cache')
             .upsert({
                 user_id: userId,
-                stats_json: stats,
+                stats_json: fullStats,
                 last_updated_at: new Date().toISOString()
             });
     }

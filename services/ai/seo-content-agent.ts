@@ -1,15 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateResponse } from '@/lib/ai/vertexClient';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 export class SEOContentAgent {
-    private genAI: GoogleGenerativeAI;
-    private model: any;
-
-    constructor() {
-        const apiKey = process.env.GOOGLE_GEMINI_API_KEY || '';
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    }
+    constructor() { }
 
     /**
      * Automatically generate and publish an SEO-optimized blog post based on market trends
@@ -63,8 +56,7 @@ export class SEOContentAgent {
                 }
             `;
 
-            const result = await this.model.generateContent(prompt);
-            const responseText = result.response.text();
+            const responseText = await generateResponse(prompt);
 
             // Extract JSON from response (handling potential markdown code blocks)
             const jsonStr = responseText.includes('```json')

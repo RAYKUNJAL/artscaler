@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { TrendingUp, DollarSign, Tag, ExternalLink, Loader2, Info, Zap, ArrowRight, Package, Layout } from 'lucide-react';
+import { TrendingUp, DollarSign, Tag, ExternalLink, Loader2, Info, Zap, ArrowRight, Package, Layout, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { DEMO_MARKET_DATA, getDemoBadge } from '@/lib/demo-data';
 
 interface Opportunity {
     id: string;
@@ -28,6 +29,7 @@ export default function Opportunities() {
     const { session, loading: authLoading } = useAuth();
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDemo, setIsDemo] = useState(false);
 
     useEffect(() => {
         if (!authLoading && session) {
@@ -45,9 +47,33 @@ export default function Opportunities() {
                 .limit(20);
 
             if (error) throw error;
-            setOpportunities(data || []);
+
+            if (data && data.length > 0) {
+                setOpportunities(data);
+                setIsDemo(false);
+            } else {
+                // Set demo data
+                setOpportunities(DEMO_MARKET_DATA.slice(0, 4).map((item, i) => ({
+                    id: `demo-${i}`,
+                    topic_label: item.title,
+                    wvs_score: item.wvs_score,
+                    velocity_score: 1.5 + (Math.random()),
+                    recommended_price_band: {
+                        min: item.price * 0.9,
+                        max: item.price * 1.5,
+                        median: item.price * 1.2
+                    },
+                    recommended_sizes: [item.size],
+                    recommended_mediums: ['Original Acrylic', 'Mixed Media'],
+                    keyword_stack: ['original', 'signed', item.style.toLowerCase()],
+                    evidence_urls: [item.item_url],
+                    date: new Date().toISOString()
+                })));
+                setIsDemo(true);
+            }
         } catch (error) {
             console.error('Error fetching opportunities:', error);
+            setIsDemo(true);
         } finally {
             setLoading(false);
         }
@@ -74,6 +100,12 @@ export default function Opportunities() {
                             Hot Pulse Alerts
                         </h1>
                         <p className="text-gray-400 font-medium">Real-time demand signals identified from eBay buyer activity.</p>
+                        {isDemo && (
+                            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{getDemoBadge('Intelligence Feed')}</span>
+                            </div>
+                        )}
                     </div>
                     <Link
                         href="/market-scanner"
@@ -169,12 +201,15 @@ export default function Opportunities() {
                                         <Layout className="h-3.5 w-3.5" />
                                         Build Listing
                                     </Link>
-                                    <button
+                                    <a
+                                        href={opp.evidence_urls?.[0] || '#'}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         title="View evidence on eBay"
                                         className="p-3 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl transition-all border border-gray-700"
                                     >
                                         <ExternalLink className="h-4 w-4" />
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         ))}

@@ -1,0 +1,4 @@
+.usage-progress-bar {
+    width: var(--usage-percent, 0%);
+    transition: width 0.5s ease-in-out;
+}

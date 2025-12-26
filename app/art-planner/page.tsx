@@ -15,6 +15,7 @@ import {
     ChevronRight,
     CheckCircle2
 } from 'lucide-react';
+import { DEMO_PLANNER_RECS, getDemoBadge } from '@/lib/demo-data';
 
 interface Recommendation {
     id: string;
@@ -33,20 +34,56 @@ export default function ArtPlanner() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState<string | null>(null);
     const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+    const [isDemo, setIsDemo] = useState(false);
 
     useEffect(() => {
         loadRecommendations();
     }, []);
 
     const loadRecommendations = async () => {
+        setIsLoading(true);
+        setIsDemo(false);
         try {
             const res = await fetch('/api/art-planner');
             const data = await res.json();
-            if (data.success) {
+            if (data.success && data.recommendations.length > 0) {
                 setRecommendations(data.recommendations);
+                setIsDemo(false);
+            } else {
+                // UX Synergy Logic: Tailor planner based on preferences
+                let preferredStyles: string[] = [];
+                if (typeof window !== 'undefined') {
+                    const saved = localStorage.getItem('artscaler_pref_styles');
+                    if (saved) preferredStyles = JSON.parse(saved);
+                }
+
+                const mapped = DEMO_PLANNER_RECS.map((r, i) => ({
+                    id: `demo-${i}`,
+                    subject: r.subject,
+                    wvs: r.score,
+                    velocity: r.score,
+                    medianPrice: 150,
+                    targetPrice: 185,
+                    recommendedSizes: ['16x20'],
+                    confidence: 0.92,
+                    date: new Date().toLocaleDateString()
+                }));
+
+                // Sort by preference (e.g., if subject contains a preferred keyword)
+                const sorted = [...mapped].sort((a, b) => {
+                    const aMatch = preferredStyles.some(s => a.subject.toLowerCase().includes(s.toLowerCase().replace('_', ' ')));
+                    const bMatch = preferredStyles.some(s => b.subject.toLowerCase().includes(s.toLowerCase().replace('_', ' ')));
+                    if (aMatch && !bMatch) return -1;
+                    if (!aMatch && bMatch) return 1;
+                    return 0;
+                });
+
+                setRecommendations(sorted as any);
+                setIsDemo(true);
             }
         } catch (err) {
             console.error('Error loading recommendations:', err);
+            setIsDemo(true);
         } finally {
             setIsLoading(false);
         }
@@ -98,6 +135,12 @@ export default function ArtPlanner() {
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Art Planner</h1>
                         <p className="text-gray-400">Weekly recommendations powered by ArtScaler Intelligence</p>
+                        {isDemo && (
+                            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{getDemoBadge('Art Planner')}</span>
+                            </div>
+                        )}
                     </div>
                     <button
                         onClick={() => {

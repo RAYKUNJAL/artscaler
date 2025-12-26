@@ -29,10 +29,10 @@ export default function PricingPage() {
             price: { monthly: 0, yearly: 0 },
             description: 'Perfect for exploring the platform',
             features: [
-                '5 daily scrapes',
+                '10 daily searches',
                 '3 keyword tracking',
                 '7 days historical data',
-                'Baseline WVS only',
+                'Standard WVS access',
                 'Community support'
             ],
             cta: 'Get Started Free',
@@ -40,58 +40,40 @@ export default function PricingPage() {
             color: 'from-gray-600 to-gray-700'
         },
         {
-            id: 'artist',
-            name: 'Artist',
+            id: 'pro',
+            name: 'Pro Painter',
             icon: Palette,
-            price: { monthly: 20, yearly: 200 },
+            price: { monthly: 29, yearly: 290 },
             description: 'For serious artists starting to scale',
             features: [
-                '100 daily scrapes',
+                '100 daily searches',
                 '25 keyword tracking',
                 '30 days historical data',
                 'Global Market Pulse',
                 'AI Market Advisor',
                 'Smart alerts'
             ],
-            cta: 'Start Artist Plan',
+            cta: 'Start Pro Plan',
             popular: true,
             color: 'from-blue-600 to-blue-700'
         },
         {
             id: 'studio',
-            name: 'Studio',
+            name: 'Studio Empire',
             icon: Rocket,
-            price: { monthly: 50, yearly: 500 },
+            price: { monthly: 79, yearly: 790 },
             description: 'For established studios & galleries',
             features: [
-                '500 daily scrapes',
-                '100 keyword tracking',
-                '180 days historical data',
+                '1,000 daily searches',
+                'Unlimited keyword tracking',
+                'Full historical data',
                 'Full AI Pipeline access',
                 'AI Market Advisor',
                 'Auto-listing generation'
             ],
-            cta: 'Upgrade to Studio',
+            cta: 'Upgrade to Studio+',
             popular: false,
             color: 'from-purple-600 to-purple-700'
-        },
-        {
-            id: 'empire',
-            name: 'Empire',
-            icon: Crown,
-            price: { monthly: 120, yearly: 1200 },
-            description: 'For power users & agencies',
-            features: [
-                '5,000 daily scrapes',
-                '500 keyword tracking',
-                'Unlimited historical data',
-                'Full API access',
-                'White-label reports',
-                'Dedicated account manager'
-            ],
-            cta: 'Go Empire',
-            popular: false,
-            color: 'from-amber-600 to-amber-700'
         }
     ];
 
@@ -170,7 +152,7 @@ export default function PricingPage() {
                 </div>
 
                 {/* Pricing Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                     {plans.map((plan) => {
                         const Icon = plan.icon;
                         const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;

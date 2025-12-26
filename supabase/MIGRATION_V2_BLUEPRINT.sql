@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS membership_config (
 INSERT INTO membership_config (tier_id, name, price_monthly, price_yearly, daily_scrapes_limit, keywords_limit, historical_data_days, has_predictions, has_auto_listing, has_alerts, has_competitor_tracker, has_api_access)
 VALUES 
 ('free', 'Free Scout', 0, 0, 10, 5, 7, false, false, false, false, false),
-('pro', 'Pro Painter', 29.99, 299, 500, 150, 365, true, true, true, true, false),
-('studio', 'Studio Empire', 99.99, 999, 5000, 1000, -1, true, true, true, true, true)
+('pro', 'Pro Painter', 29.99, 299, 100, 50, 30, true, true, true, true, false),
+('studio', 'Studio Empire', 99.99, 999, 1000, 500, -1, true, true, true, true, true)
 ON CONFLICT (tier_id) DO UPDATE SET
   name = EXCLUDED.name,
   price_monthly = EXCLUDED.price_monthly,

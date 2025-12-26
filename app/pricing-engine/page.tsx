@@ -8,8 +8,10 @@ import {
     BarChart3,
     Target,
     ChevronRight,
-    Loader2
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
+import { DEMO_PRICING_DATA, getDemoBadge } from '@/lib/demo-data';
 import {
     BarChart,
     Bar,
@@ -28,6 +30,7 @@ export default function PricingEnginePage() {
     const [selectedStyle, setSelectedStyle] = useState('abstract');
     const [pricingData, setPricingData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [isDemo, setIsDemo] = useState(false);
 
     const sizes = ['8x10', '11x14', '16x20', '18x24', '24x30', '24x36', '30x40', '36x48'];
     const styles = ['Abstract', 'Landscape', 'Portrait', 'Still Life', 'Seascape', 'Cityscape'];
@@ -38,12 +41,21 @@ export default function PricingEnginePage() {
 
     const fetchPricingData = async () => {
         setLoading(true);
+        setIsDemo(false);
         try {
             const response = await fetch(`/api/pricing?size=${selectedSize}&style=${selectedStyle}`);
             const data = await response.json();
-            setPricingData(data);
+
+            if (data && data.analysis && data.analysis.sample.count > 0) {
+                setPricingData(data);
+                setIsDemo(false);
+            } else {
+                setPricingData(null);
+                setIsDemo(true);
+            }
         } catch (error) {
             console.error('Error fetching pricing data:', error);
+            setIsDemo(true);
         } finally {
             setLoading(false);
         }
@@ -57,13 +69,13 @@ export default function PricingEnginePage() {
     })).reverse();
 
     const analysis = pricingData?.analysis;
-    const recommendedPrice = analysis?.bands?.safe || 0;
-    const aggressivePrice = analysis?.bands?.aggressive || 0;
-    const floorPrice = analysis?.bands?.floor || 0;
-    const minPrice = analysis?.sample?.minPrice || 0;
-    const maxPrice = analysis?.sample?.maxPrice || 0;
-    const medianPrice = analysis?.sample?.avgPrice || 0;
-    const sampleSize = analysis?.sample?.count || 0;
+    const recommendedPrice = isDemo ? DEMO_PRICING_DATA.recommended : (analysis?.bands?.safe || 0);
+    const aggressivePrice = isDemo ? DEMO_PRICING_DATA.aggressive : (analysis?.bands?.aggressive || 0);
+    const floorPrice = isDemo ? DEMO_PRICING_DATA.floor : (analysis?.bands?.floor || 0);
+    const minPrice = isDemo ? DEMO_PRICING_DATA.liquidity.lowest : (analysis?.sample?.minPrice || 0);
+    const maxPrice = isDemo ? DEMO_PRICING_DATA.liquidity.highest : (analysis?.sample?.maxPrice || 0);
+    const medianPrice = isDemo ? DEMO_PRICING_DATA.liquidity.market_avg : (analysis?.sample?.avgPrice || 0);
+    const sampleSize = isDemo ? DEMO_PRICING_DATA.liquidity.recent_sold : (analysis?.sample?.count || 0);
 
     return (
         <DashboardLayout>
@@ -73,6 +85,12 @@ export default function PricingEnginePage() {
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Pulse Pricing Engine</h1>
                         <p className="text-gray-400">Precision pricing calibrated against recent marketplace liquidations.</p>
+                        {isDemo && (
+                            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                <AlertCircle className="h-4 w-4 text-amber-500" />
+                                <span className="text-xs text-amber-500 font-bold uppercase tracking-widest">{getDemoBadge('Pricing Engine')}</span>
+                            </div>
+                        )}
                     </div>
                     {loading && <Loader2 className="h-6 w-6 animate-spin text-blue-500" />}
                 </div>
@@ -180,15 +198,15 @@ export default function PricingEnginePage() {
                             Pricing Distribution
                         </h3>
                         <ResponsiveContainer width="100%" height={250}>
-                            <LineChart data={historicalData.length > 0 ? historicalData : [{ month: 'No Data', avgPrice: 0 }]}>
+                            <LineChart data={isDemo ? DEMO_PRICING_DATA.trends.map((v, i) => ({ month: `Day ${i + 1}`, avgPrice: v, topPrice: v * 1.2 })) : historicalData.length > 0 ? historicalData : [{ month: 'No Data', avgPrice: 0 }]}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                                <XAxis dataKey="month" stroke="#4B5563" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#4B5563" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                                <XAxis dataKey="month" stroke="#4B5563" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="#4B5563" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '12px' }}
-                                    itemStyle={{ color: '#F3F4F6' }}
+                                    itemStyle={{ color: '#F3F4F6', fontSize: '12px' }}
                                 />
-                                <Line type="monotone" dataKey="avgPrice" stroke="#3B82F6" strokeWidth={4} dot={{ r: 6, fill: '#3B82F6' }} />
+                                <Line type="monotone" dataKey="avgPrice" stroke="#3B82F6" strokeWidth={4} dot={{ r: 4, fill: '#3B82F6' }} />
                                 <Line type="monotone" dataKey="topPrice" stroke="#8B5CF6" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                             </LineChart>
                         </ResponsiveContainer>

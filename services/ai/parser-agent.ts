@@ -11,9 +11,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
+import { generateResponse } from '@/lib/ai/vertexClient';
 
 export interface ParsedSignal {
     listing_id: string;
@@ -312,8 +310,6 @@ export class ParserAgent {
      */
     private async parseWithAI(title: string): Promise<Partial<ParsedSignal>> {
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
             const prompt = `You are an art expert. Extract the following from art listing titles:
 - size (width and height in inches)
 - medium (oil, acrylic, watercolor, etc.)
@@ -326,9 +322,7 @@ Respond in JSON format: {"width": 16, "height": 20, "medium": "oil", "subject": 
 If you can't determine a field, use null.
 Title: ${title}`;
 
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            const text = await generateResponse(prompt);
 
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};

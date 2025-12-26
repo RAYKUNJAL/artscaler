@@ -51,7 +51,7 @@ async function diagnoseEbayApi() {
     // Step 3: Test Finding API - Completed Items
     console.log('\n🔍 Step 3: Testing Finding API (Completed Items)...');
     try {
-        const completedItems = await ebayApiClient.findCompletedItems('painting', 5);
+        const completedItems = await ebayApiClient.findCompletedItems('test-user', 'painting', 5);
         console.log(`  ✅ Found ${completedItems.length} completed items`);
         if (completedItems.length > 0) {
             console.log(`  📦 Sample: ${completedItems[0].title}`);
@@ -68,7 +68,7 @@ async function diagnoseEbayApi() {
     // Step 4: Test Finding API - Active Items
     console.log('\n🔍 Step 4: Testing Finding API (Active Items)...');
     try {
-        const activeItems = await ebayApiClient.findActiveItems('painting', 5);
+        const activeItems = await ebayApiClient.findActiveItems('test-user', 'painting', 5);
         console.log(`  ✅ Found ${activeItems.length} active items`);
         if (activeItems.length > 0) {
             console.log(`  📦 Sample: ${activeItems[0].title}`);

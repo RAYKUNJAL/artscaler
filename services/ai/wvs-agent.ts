@@ -77,6 +77,7 @@ interface SoldListing {
 
 interface ActiveListing {
     id: string;
+    listing_id: string;
     title: string;
     watcher_count: number | null;
     bid_count: number | null;
@@ -231,6 +232,7 @@ export class WVSAgent {
         }
 
         // 4. Process Active Listings
+        const activeUpdates: any[] = [];
         for (const listing of activeListings || []) {
             const daysActive = this.calculateDaysActive(listing.first_seen_at || listing.created_at);
 
@@ -242,16 +244,26 @@ export class WVSAgent {
                 categoryMedianPrice: this.categoryMedians.get(this.categorizeSize(listing.width_in, listing.height_in)) || 150
             });
 
-            // Update active_listing with demand_score and wvs
-            await supabase
-                .from('active_listings')
-                .update({
-                    demand_score: Math.min(score.wvs * 10, 100),
-                    watcher_velocity: score.components.pulseVelocity
-                })
-                .eq('id', listing.id);
+            // Prepare update for batch
+            activeUpdates.push({
+                id: listing.id,
+                user_id: userId, // Required for upsert if not in the set
+                demand_score: Math.min(score.wvs * 10, 100),
+                watcher_velocity: score.components.pulseVelocity,
+                listing_id: listing.listing_id // Ensure identifying field for upsert
+            });
 
             this.addToClusters(listing, score, 'Abstract', this.categorizeSize(listing.width_in, listing.height_in), styleClusters, sizeClusters);
+        }
+
+        // Batch update active_listings
+        if (activeUpdates.length > 0) {
+            console.log(`📦 WVS Agent: Batch updating ${activeUpdates.length} active listings...`);
+            const { error: batchErr } = await supabase
+                .from('active_listings')
+                .upsert(activeUpdates, { onConflict: 'listing_id' });
+
+            if (batchErr) console.error('❌ WVS Agent: Batch update failed:', batchErr);
         }
 
         // 5. Format outcomes

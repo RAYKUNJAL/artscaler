@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Download, Sparkles, Heart, Star, Gift, Check } from 'lucide-react';
-import { GeminiAIService } from '@/services/ai/gemini-service';
 import { jsPDF } from 'jspdf';
 
 interface ThankYouCard {
@@ -65,13 +64,22 @@ export default function ThankYouCardGenerator() {
         setLoading(true);
 
         try {
-            // Generate AI-powered thank you message
-            const aiMessage = await GeminiAIService.generateThankYouMessage(
-                formData.buyerName,
-                formData.artworkTitle,
-                formData.artistName,
-                formData.personalNote
-            );
+            // Generate AI-powered thank you message via API
+            const res = await fetch('/api/studio/thank-you', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    buyerName: formData.buyerName,
+                    artworkTitle: formData.artworkTitle,
+                    artistName: formData.artistName,
+                    personalNote: formData.personalNote
+                })
+            });
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+
+            const aiMessage = data.message;
 
             const card: ThankYouCard = {
                 id: `card-${Date.now()}`,
