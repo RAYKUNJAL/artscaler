@@ -36,15 +36,15 @@ export default function ArtCard({ listing, onQuickView }: ArtCardProps) {
         >
             {/* Price Badge */}
             <div className="absolute top-3 right-3 z-10">
-                <div className="bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg flex items-center gap-1">
-                    <DollarSign className="h-3 w-3" />
-                    {listing.sold_price}
+                <div className="bg-green-600 text-white text-xs md:text-sm font-black px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1">
+                    <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    {listing.sold_price.toLocaleString()}
                 </div>
             </div>
 
             {/* Sold Date Badge */}
             <div className="absolute top-3 left-3 z-10">
-                <div className="bg-black/60 backdrop-blur-md text-gray-300 text-[10px] font-bold px-2 py-1 rounded-md border border-white/10 uppercase tracking-widest">
+                <div className="bg-black/60 backdrop-blur-md text-gray-200 text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg border border-white/10 uppercase tracking-widest">
                     Sold {new Date(listing.sold_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </div>
             </div>
@@ -109,10 +109,10 @@ export default function ArtCard({ listing, onQuickView }: ArtCardProps) {
                     href={listing.item_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[10px] font-black text-gray-500 hover:text-blue-400 uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1.5 text-xs md:text-sm font-black text-blue-400 hover:text-blue-300 uppercase tracking-wide transition-colors px-3 py-1.5 hover:bg-blue-500/10 rounded-lg"
                 >
-                    View Source
-                    <ExternalLink className="h-3 w-3" />
+                    View Listing
+                    <ExternalLink className="h-3.5 w-3.5" />
                 </a>
             </div>
         </div>
